@@ -75,7 +75,7 @@ end
 # = run_dada2 =
 # =============
 
-desc "Perform Qiime2 QC steps and export sequences that pass QC"
+desc "Perform Qiime2 QC steps"
 task :run_dada2 => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza"]
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv" do |t|
 
@@ -118,7 +118,7 @@ end
 # ==============
 
 
-desc "Perform Qiime2 QC steps and export sequences that pass QC"
+desc "Export sequences that pass Qiime QC and run Kraken for contaminant analysis"
 task :run_kraken => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv"]
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" do |t|
 
@@ -180,9 +180,45 @@ ktImportTaxonomy $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.krepor
 
 end
 
+# =============
+# = run_MC_QC =
+# =============
+
+desc "Calculate abundance and edit distances by comparing expected vs oberved MC measures"
+
+# ==================
+# = create_QC_page =
+# ==================
+
+desc "Create a landing page for all QC results"
+
+#Add multiQC,Qiime QC and MC QC charts
+#Link out to Biom File, Metadata file
+
 # =================
 # = upload_QC_pdb =
 # =================
 
+desc "push QC info to PathogenDB tables"
+
+# ======================
+# = run_Qiime_analysis =
+# ======================
+
+
+desc "Calculate Alpha Diversity, Beta Diversity and Taxon classification for singe/multiple Runs"
+
+
+# ==============================
+# = create_Qiime_analysis_page =
+# ==============================
+
+desc "Create landing page for all Qiime analyses" 
+
+# =======================
+# = upload_analysis_pdb =
+# =======================
+
+desc "push analysis results to PDB tables" 
 
 
