@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Must be configured by the end user
+export REPO_DIR="/sc/orga/work/kumara22/metagenomics_pipeline_dev/scripts/microbiome_pdb_pipeline"
+
+# Load required modules
+module load ruby/2.2.0
+
+# Defaults will probably work for these
+export TMP="/sc/orga/scratch/$USER/tmp"
+export SHARED_DIR="/sc/orga/scratch/$USER/shared_dir"
+export CLUSTER="BASH"
+
+# If running from interactive1/interactive2, need to run requests through internal HTTP proxy
+export HTTP_PROXY="http://proxy.mgmt.hpc.mssm.edu:8123"
+
+# Run rake
+rake -f $REPO_DIR/Rakefile "$@"
