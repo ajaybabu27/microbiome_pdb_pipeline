@@ -19,10 +19,25 @@ REPO_DIR = File.dirname(__FILE__)
 #######
 # Other environment variables that may be set by the user for specific tasks (see README.md)
 #######
+
 RUN_ID = ENV['RUN_ID']
 FASTQ_DIR = ENV['FASTQ_DIR']
 QC_DIR = ENV['QC_DIR']
 ANALYSIS_DIR = ENV['ANALYSIS_DIR']
+
+task :env do
+     
+  sc_orga_scratch = "/sc/orga/scratch/#{ENV['USER']}"
+  puts "#{sc_orga_scratch}"
+  ENV['TMP'] ||= Dir.exists?(sc_orga_scratch) ? sc_orga_scratch : "/tmp"
+  
+  ENV['PERL5LIB'] ||= "/usr/bin/perl5.10.1"
+
+  mkdir_p ENV['TMP'] or abort "FATAL: set TMP to a directory that can store scratch files"
+
+  puts "#{TMP}"
+
+end
 
 file "#{REPO_DIR}/scripts/env.sh" => "#{REPO_DIR}/scripts/example.env.sh" do
   cp "#{REPO_DIR}/scripts/example.env.sh", "#{REPO_DIR}/scripts/env.sh"
@@ -123,7 +138,7 @@ task :run_kraken => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv"]
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" do |t|
 
  system <<-SH or abort
-
+  
   module purge
   module load qiime2/2018.4
     
@@ -139,16 +154,18 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" => "#{QC_DIR}/#{RUN_ID}/al
 
   module purge
   module load python py_packages
-
   python #{REPO_DIR}/scripts/post_qc_reads_export.py #{QC_DIR}/#{RUN_ID}
+ 
+  #mkdir -p /tmp/db_custom_06192018
+  #rm -r /tmp/db_custom_06192018/*
+  #cp /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/* /tmp/db_custom_06192018
 
-  sample_directory=#{QC_DIR}/#{RUN_ID}
+  #cp -r /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/taxonomy /tmp/db_custom_06192018
 
-  mkdir -p /tmp/db_custom_06192018
-  cp /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/* /tmp/db_custom_06192018
+  #num_cores=(`grep -c ^processor /proc/cpuinfo`)
 
   echo -e "#SampleID\tBarcodeSequence\tLinkerPrimerSequence\tDescription\tunclassified_reads\tbacteria_reads\tviral_reads\tcdiff_reads\thuman_reads" > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
-
+  sample_directory=#{QC_DIR}/#{RUN_ID}
   for sample in $sample_directory/*/ ; do
 
 	sample_id=(`basename $sample`)
@@ -160,21 +177,22 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" => "#{QC_DIR}/#{RUN_ID}/al
 
 	fi
 	
-	mkdir -p $sample/2_kraken	
+	mkdir -p $sample"2_kraken"
 	
-	kraken --threads 12 -db /tmp/db_custom_06192018 --output $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" --fasta-input $sample/1_$sample_id_mod.fasta
+	kraken --threads 36 -db /tmp/db_custom_06192018 --output $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" --fasta-input $sample"1_"$sample_id_mod.postqc.fasta
 
 	kraken-report --db /tmp/db_custom_06192018 $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" > $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" && \
-ktImportTaxonomy $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" -t 5 -m 3 -s 0 -o $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.kronaQC.html"
+ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" -t 5 -m 3 -s 0 -o $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.kronaQC.html"
 
-	unclassified_reads=(`grep "unclassified" $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`) 
-	bacteria_reads=(`grep "Bacteria" $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`) 
-	viral_reads=(`grep "Viruses" $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
-	cdiff_reads=(`grep "Clostridioides difficile" $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
-	human_reads=(`grep "Homo sapiens" $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	unclassified_reads=(`grep "unclassified" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	bacteria_reads=(`grep "Bacteria" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	viral_reads=(`grep "Viruses" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	cdiff_reads=(`grep "Clostridioides difficile" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	human_reads=(`grep "Homo sapiens" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
 
 	echo -e $sample_id_mod"\t\t\t\t"$unclassified_reads"\t"$bacteria_reads"\t"$viral_reads"\t"$cdiff_reads"\t"$human_reads >> #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
 
+   done
   
  SH
 
@@ -185,7 +203,62 @@ end
 # =============
 
 desc "Calculate abundance and edit distances by comparing expected vs oberved MC measures"
+task :run_MC_QC => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv"]
+file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" do |t|
 
+ system <<-SH or abort
+  module purge
+  module load bwa
+  module load samtools/1.7
+  module load R
+  module load bamtools
+
+  sample_directory=#{QC_DIR}/#{RUN_ID}
+  mkdir -p sample_directory/all_samples_QC/mc_QC/zymo
+  mkdir -p sample_directory/all_samples_QC/mc_QC/clemente
+
+  # Process PhiX reads
+  
+  output_directory=/sc/orga/scratch/kumara22/mc_out/#{RUN_ID}/phiX  
+  #{REPO_DIR}/scripts/phiX.sh #{QC_DIR}/#{RUN_ID} $output_directory
+  mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/phiX
+  cp $output_directory/phiXQC_edit_dist.txt $output_directory/phiXQC.sorted.seq #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/phiX
+
+  # Process Zymo and Celemente MC samples
+  for sample in $sample_directory/*/ ; do
+  	sample_id=(`basename $sample`)
+	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.' | awk '{gsub("_1", "");print}' `)
+	query_fasta=$sample"1_"$sample_id_mod".postqc.fasta"
+		
+	if [[ $sample_id =~ ^M.* ]]; then
+		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc.fasta
+		output_directory=/sc/orga/scratch/kumara22/mc_out/#{RUN_ID}/clemente
+		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file
+		python #{REPO_DIR}/scripts/bwa_mapper_parse.py $output_directory
+		mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente
+		paste $output_directory/*edit* > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/clemente_postqc_edit_dist.txt
+		cp $output_directory/summary.tsv #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/summary.tsv
+	
+		
+	elif [[ $sample_id =~ ^Z.* ]]; then
+		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/zymo_mc.fasta
+		output_directory=/sc/orga/scratch/kumara22/mc_out/#{RUN_ID}/zymo
+		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file
+		python #{REPO_DIR}/scripts/bwa_mapper_parse.py $output_directory
+		mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo
+		paste $output_directory/*edit* > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/zymo_postqc_edit_dist.txt
+		cp $output_directory/summary.tsv #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/summary.tsv
+		Rscrpit #{REPO_DIR}/scripts/community_stats_zymo.R #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo
+		
+	fi
+
+  done
+
+
+
+SH
+
+end
 # ==================
 # = create_QC_page =
 # ==================
