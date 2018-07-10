@@ -42,4 +42,4 @@ If a required environment variable isn't present when a task is run and there is
 Variable             | Required by                                             | Default | Purpose
 ---------------------|---------------------------------------------------------|---------|-----------------------------------
 `RUN_ID`             | all tasks                                               | (none)  | Illumina RUN ID
-`QC_DIR`        | `pull_down_raw_reads` `prokka_to_igb` `post_circlator` `ilm:rast_to_igb`  | (none)  | The ID of the job on the SMRTPortal with your reads.
+`QC_DIR`        |   | (none)  | The ID of the job on the SMRTPortal with your reads.
