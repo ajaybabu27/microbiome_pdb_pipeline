@@ -2,7 +2,7 @@
 Computational workflows for analyzing 16S and metagenomics data 
 ## Requirements
 
-Pipeline currently works on Minerva HPC environment. With little tweaking it should be portable in any environment of choice. Users need access to Minerva and InfectiousDisease project. Users also need access to PathogenDB database to upload meta and final data points for further query. 
+Pipeline currently works on Minerva HPC environment. With little tweaking it should be portable in any environment of choice. Users need access to Minerva and InfectiousDisease project. Users also need access to PathogenDB database to upload meta and final data points for further query. NOTE: This pipeline currently only contains components for the 16S workflow and the metagenomics workflow will be added in the future. 
 ## Usage
 
 First, clone this repository to a directory and `cd` into it.  You'll want to configure your environment first using the included script:
@@ -41,5 +41,9 @@ If a required environment variable isn't present when a task is run and there is
 
 Variable             | Required by                                             | Default | Purpose
 ---------------------|---------------------------------------------------------|---------|-----------------------------------
-`RUN_ID`             | all tasks                                               | (none)  | Illumina RUN ID
-`QC_DIR`        |   | (none)  | The ID of the job on the SMRTPortal with your reads.
+`RUN_ID`             | all tasks                                               | (none)  | Illumina RUN ID 
+`FASTQ_DIR`          | all QC tasks                                            | (none)  | Folder containing the raw fastq files 
+`QC_DIR`             | all QC tasks                                            |`FASTQ_DIR`| Directory were all the QC output files will be saved
+`ANALYSIS_DIR`       | all analysis tasks                                      | (none)  |  Directory were all the files generated from various analyses will be stored
+
+
