@@ -1,10 +1,12 @@
-setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/samples/H434/all_samples_QC/mc_QC/clemente/')
+args = commandArgs(trailingOnly=TRUE)
+
+setwd(args[1])
 
 summary_df=read.table(file='summary.tsv',sep='\t',header=T)
 
 row.names(summary_df)<-summary_df$Sample
 summary_df$Sample<-NULL
-theoretical_df=read.table(file='/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc_16s_abundance.csv',sep='\t',header=T,row.names = 1)
+theoretical_df=read.table(file='/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc_16s_abundance.csv',sep='\t',header=T,row.names = 1)
 summary_df<-summary_df[,c(rownames(theoretical_df),'total')]
 summary_df<-summary_df[grep('M',rownames(summary_df)),] #for run3
 summary_df$total_mapped_reads=rowSums(summary_df[,c(1:15)]) 
@@ -68,28 +70,17 @@ ggplot(data=summary_df_per_melt, aes(x = summary_df_per_melt$expt_cond, y = summ
         axis.title=element_text(size=35,face="bold"))+
   expand_limits(y = max(100 * 1.05))+
   geom_point(aes(x = summary_df_per_melt$expt_cond,y=summary_df_per_melt$primary_mapped_per),color='white',size=5,show.legend=F)
-ggsave("run7_summary_mc_clemente_stacked.pdf", width = 126, height = 126,unit='cm',dpi=200)
-ggsave("run7_summary_mc_clemente_stacked.png", width = 126, height = 126,unit='cm',dpi=200)
+ggsave("summary_mc_clemente_stacked.pdf", width = 126, height = 126,unit='cm',dpi=200)
+ggsave("summary_mc_clemente_stacked.png", width = 126, height = 126,unit='cm',dpi=200)
 
 #write.table(summary_df_per_melt,file='mc_melt.tsv',sep='\t',row.names = F)
 
 library(GGally)
 library(scales)
 out_data<-as.data.frame(summary_df_per_t)
-colnames(out_data)[1]<-"M13_illumina_1A"
-colnames(out_data)[3]<-"M1_illumina_1A"
-colnames(out_data)[5]<-"M6_illumina_1A"
+out_data$color<-rownames(out_data)
 
-out_data_cle=read.table('../microany00005/clemente_corr_plot_df.tsv',sep='\t',header = T,row.names = 1)
-out_data_run2=read.table('../microany00003/clemente_corr_plot_df.tsv',sep='\t',header = T,row.names = 1)
-colnames(out_data_run2)<-c(paste('run2',colnames(out_data_run2),sep="_"))
-out_data<-merge(out_data,out_data_cle[,c(1:5)],by=0)
-out_data<-merge(out_data,out_data_run2[,c(1:5)],by.x=1,by.y=0)
-
-out_data$color<-out_data$Row.names
-out_data$Row.names<-NULL
-
-out_data<-merge(out_data,theoretical_df[,c(6,7)],by.x='color',by.y=0)
+out_data<-merge(out_data,theoretical_df[,c(6,7)],by=0)
 out_data$GC.genome<-as.character(out_data$GC.genome)
 out_data$GC.genome<-substr(out_data$GC.genome, 1, nchar(out_data$GC.genome)-1)
 out_data$GC.genome<-as.numeric(out_data$GC.genome)
@@ -98,8 +89,6 @@ out_data$color<-factor(out_data$color,levels = out_data$color)
 out_data<-out_data[order(out_data$gram,out_data$GC.genome),]
 out_data$color<-as.character(out_data$color)
 out_data$color<-factor(out_data$color,levels=unique(out_data$color))
-
-#write.table(out_data,file='corr_plot.tsv',sep='\t',row.names = F)
 
 combo_plot<-function(p,p1,p2){
   g2 <- ggplotGrob(p2)
@@ -119,28 +108,95 @@ combo_plot<-function(p,p1,p2){
   return(p1)
 }
 
-#Run 2
-out_data[2:16]<-log2(out_data[2:16])
-col_sel<-c(5,15,7)
-col_sel<-colnames(out_data)[grepl('M15',colnames(out_data))]
-col_sel[2:3]<-col_sel[3:2]
+out_data[2:11]=log2(out_data[2:11])
 
+for (sample_group in c('M1','M6','M13')){
 
-#RUn 4_5
-out_data[2:22]<-log2(out_data[2:22])
-
-col_sel<-colnames(out_data)[grepl('M6',colnames(out_data))]
-col_sel=c("M6_illumina_1A","M6_IDT_1A","run2_M6_1A_1_1ng","cle_M6_1A","M6")
-col_sel<-c(4,5,21,16,8)
-
-out_data[2:21]=log2(out_data[2:21])
-col_sel<-colnames(out_data)[grepl('M6',colnames(out_data)) & !grepl('cle',colnames(out_data))]
-col_sel<-c(2,3,4,20,7)
-col_sel[2:3]<-col_sel[3:2]
+if (sample_group=='M1'){
+  col_sel<-colnames(out_data)[grepl('M1\\.',colnames(out_data))]
+  col_sel<-c(col_sel,'M1')
+  
+}
+else{
+col_sel<-colnames(out_data)[grepl(sample_group,colnames(out_data))]
+}
+#col_sel<-c(2,3,4,20,7)
+#col_sel[2:3]<-col_sel[3:2]
 p1<-ggpairs(out_data,axisLabels='internal',lower=list(mapping = aes(colour = color,size=GC.genome,shape=gram)),columns = col_sel)
 p2<-ggcorr(out_data[,c(col_sel)],label_round = 2,label = T,label_color = "black")
-p<-5
+p<-length(col_sel)
 print(combo_plot(p,p1,p2))
-ggsave("run7_summary_mc_M1_corr_plot_dna_conc.pdf", width = 50, height = 30,unit='cm',dpi=200)
-ggsave("run7_summary_mc_M1_corr_plot_dna_conc.png", width = 50, height = 30,unit='cm',dpi=200)
+ggsave(paste("summary_mc_",sample_group,"_corr_plot_dna_conc.pdf",sep=''), width = 50, height = 30,unit='cm',dpi=200)
 
+}
+
+library(reshape2)
+library(ggplot2)
+library(scales)
+
+test <- read.table("../PhiX/PhiXQC_edit_dist.txt",sep='\t',header = T)
+
+test_m_temp<-melt(test,na.rm = T)
+
+xpos <- c(Inf,Inf)
+ypos <- c(Inf,Inf)
+mean_char=paste('Mean=',as.character(round(mean(test_m_temp$value),digits=2)))
+sd_char=paste('SD=',as.character(round(sd(test_m_temp$value),digits = 2)))
+annotateText <- c(mean_char,sd_char)
+hjustvar<-c(1,1) 
+vjustvar<-c(1,2.5)
+
+pdf("clemente_edit_dist_perhist.pdf", onefile = TRUE,width=15, height=5)
+p<-ggplot(test_m_temp, aes(x = factor(test_m_temp$value))) +  
+  geom_bar(aes(y = (..count..)/sum(..count..))) + 
+  scale_y_continuous(labels = percent_format()) + geom_vline(xintercept = quantile(test_m_temp$value,.90)+1,colour='red')+
+  labs(x='edit_distance',y='percentage_distribution',title="PhiX Edit Distance (Pre-QC)")+
+  geom_text(data=as.data.frame(annotateText),aes(x=xpos,y=ypos,hjust=hjustvar,vjust=vjustvar,label=annotateText))+
+  scale_x_discrete(limits=as.character(seq(0,10)))
+
+print(p)
+#Plot percentage histogram plots for edit distances
+library(Rmisc)
+library(ggplot2)
+library(reshape2)
+library(scales)
+library(gridExtra)
+
+test <- read.csv("clemente_postqc_edit_dist.txt",sep='\t',header = T)
+
+test_m<-melt(test,na.rm = T)
+
+list_plot=list()
+
+
+#for (x in zymo_order){
+for (x in levels(test_m$variable)){
+  
+  test_m_temp<-test_m[test_m$variable==x,]
+  
+  xpos <- c(Inf,Inf)
+  ypos <- c(Inf,Inf)
+  mean_char=paste('Mean=',as.character(round(mean(test_m_temp$value),digits=2)))
+  sd_char=paste('SD=',as.character(round(sd(test_m_temp$value),digits = 2)))
+  annotateText <- c(mean_char,sd_char)
+  hjustvar<-c(1,1) 
+  vjustvar<-c(1,2.5)
+  
+  
+  p<-ggplot(test_m_temp, aes(x = factor(test_m_temp$value))) +  
+    geom_bar(aes(y = (..count..)/sum(..count..))) + 
+    scale_y_continuous(labels = percent_format()) + geom_vline(xintercept = quantile(test_m_temp$value,.90)+1,colour='red')+
+    labs(x='edit_distance',y='percentage_distribution',title=x)+
+    geom_text(data=as.data.frame(annotateText),aes(x=xpos,y=ypos,hjust=hjustvar,vjust=vjustvar,label=annotateText))+
+    scale_x_discrete(limits=as.character(seq(0,10)))
+  
+  print(p)
+  
+  list_plot[[x]]<-p
+  
+  
+  
+  #do.call("grid.arrange", p)  
+  
+}
+dev.off()
