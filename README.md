@@ -23,7 +23,7 @@ When this is complete, you should be able to run `rake` to kick off the pipeline
 
 When firing up the pipeline in a new shell, **remember to always `source scripts/env.sh` before running `rake`.**
 
-##Workflows
+## Workflows
 
 There are two main workflows,
 1) 16S Workflow
