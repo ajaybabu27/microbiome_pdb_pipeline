@@ -47,3 +47,14 @@ Variable             | Required by                                             |
 `ANALYSIS_DIR`       | all analysis tasks                                      | (none)  |  Directory were all the files generated from various analyses will be stored
 
 
+### Running as a `bsub` task
+
+You may also want to run the pipeline as a non-interactive job on the cluster.  The benefit of this approach is that you can reserve specific resources in advance to decrease the likelihood of the job running out of memory or exceeding other system limits.  For this, the `scripts/example.microbiome_pdb_wrapper` should be copied, modified as appropriate, and then can be submitted with `bsub` as in the following example:
+
+    $ bsub -R 'rusage[mem=4000] span[hosts=1]' -m "bode mothra" -P acc_InfectiousDisease -W "24:00" \
+            -L /bin/bash -q premium -n 12 -J H434 \
+            -o "%J.stdout" -eo "%J.stderr" \
+        microbiome_pdb_wrapper \
+            RUN_ID=H434 \
+            FASTQ_DIR=/sc/orga/project/InfectiousDisease/microbiome_output/sample/H434 \
+            run_mc_qc
