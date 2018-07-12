@@ -15,7 +15,7 @@ All the default variables should work for any Minerva user with appropriate perm
     $ source scripts/env.sh
     $ bundle install --deployment
 
-When this is complete, you should be able to run `rake` to kick off the pipeline as follows. However, first read **[Environment variables](#required-environment-variables)** below, as certain tasks require more variables to be set before being invoked.  A description of the typical sequence for assembling a genome is described below in **[Tasks](#tasks)**.
+When this is complete, you should be able to run `rake` to kick off the pipeline as follows. However, first read **[Environment variables](#required-environment-variables)** below, as certain tasks require more variables to be set before being invoked.
 
     $ rake -T                    # list the available tasks
     $ rake $TASK_NAME            # run the task named $TASK_NAME
