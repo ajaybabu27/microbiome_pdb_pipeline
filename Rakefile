@@ -8,7 +8,7 @@ require 'bundler/setup'
 require 'rspec/core/rake_task'
 include Colors
 
-task :default => :create_manifest_file
+task :default => :check
 
 LSF = LSFClient.new
 LSF.disable! if ENV['LSF_DISABLED']  # Run everything locally if set (useful for debugging)
@@ -28,14 +28,10 @@ ANALYSIS_DIR = ENV['ANALYSIS_DIR']
 task :env do
      
   sc_orga_scratch = "/sc/orga/scratch/#{ENV['USER']}"
-  puts "#{sc_orga_scratch}"
+  
   ENV['TMP'] ||= Dir.exists?(sc_orga_scratch) ? sc_orga_scratch : "/tmp"
   
   ENV['PERL5LIB'] ||= "/usr/bin/perl5.10.1"
-
-  mkdir_p ENV['TMP'] or abort "FATAL: set TMP to a directory that can store scratch files"
-
-  puts "#{TMP}"
 
 end
 
@@ -45,12 +41,19 @@ end
 
 ENV_ERROR = "Configure this in scripts/env.sh and run `source scripts/env.sh` before running rake."
 
+desc "Checks environment variables and requirements before running tasks"
+task :check => [:env, "#{REPO_DIR}/scripts/env.sh"] do
+
+  mkdir_p ENV['TMP'] or abort "FATAL: set TMP to a directory that can store scratch files"
+ 
+end
+
 # ========================
 # = create_manifest_file =
 # ========================
 
 desc "creates manifest file for Qiime2"
-task :create_manifest_file 
+task :create_manifest_file => [:check, "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv"]
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv" do |t|
 
  system <<-SH or abort
@@ -91,7 +94,7 @@ end
 # =============
 
 desc "Perform Qiime2 QC steps"
-task :run_dada2 => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza"]
+task :run_dada2 => [:check, "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza"]
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv" do |t|
 
  system <<-SH or abort
@@ -121,7 +124,10 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
     --p-trunc-len-f 0 \
     --p-trunc-len-r 0 \
     --p-n-threads 0  \
-    --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2 
+    --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2
+     
+    #Output metadata file
+    Rscript #{REPO_DIR}/scripts/mapping_file_builder.R -w #{QC_DIR}/#{RUN_ID}/all_samples_QC -p #{ENV['PDBPASS']}
 
     
  SH
@@ -134,11 +140,11 @@ end
 
 
 desc "Export sequences that pass Qiime QC and run Kraken for contaminant analysis"
-task :run_kraken => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv"]
+task :run_kraken => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv"]
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" do |t|
 
  system <<-SH or abort
-  
+
   module purge
   module load qiime2/2018.4
     
@@ -193,7 +199,16 @@ ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.krepo
 	echo -e $sample_id_mod"\t\t\t\t"$unclassified_reads"\t"$bacteria_reads"\t"$viral_reads"\t"$cdiff_reads"\t"$human_reads >> #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
 
    done
+
+  #process PhiX reads
+  mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX
+  kraken --threads 36 -db /tmp/db_custom_06192018 --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --paired #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
   
+
+  kraken-report --db /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018 #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.txt > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport && \
+ktImportTaxonomy #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport -t 5 -m 3 -s 0 -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.kronaQC.html
+
+
  SH
 
 end
@@ -203,7 +218,7 @@ end
 # =============
 
 desc "Calculate abundance and edit distances by comparing expected vs oberved MC measures"
-task :run_MC_QC => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv"]
+task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv"]
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" do |t|
 
  system <<-SH or abort
@@ -219,12 +234,15 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv" => "#{QC_DIR}/#{RUN_ID}/a
 
   # Process PhiX reads
   
-  output_directory=/sc/orga/scratch/kumara22/mc_out/#{RUN_ID}/phiX  
-  #{REPO_DIR}/scripts/phiX.sh #{QC_DIR}/#{RUN_ID} $output_directory
-  mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/phiX
-  cp $output_directory/phiXQC_edit_dist.txt $output_directory/phiXQC.sorted.seq #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/phiX
+  output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/PhiX  
+  #{REPO_DIR}/scripts/phiX.sh #{QC_DIR}/#{RUN_ID} $output_directory #{REPO_DIR}
+  
+  cp $output_directory/PhiXQC_edit_dist.txt $output_directory/PhiXQC.sorted.seq #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX
 
   # Process Zymo and Celemente MC samples
+  mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo
+  mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente
+
   for sample in $sample_directory/*/ ; do
   	sample_id=(`basename $sample`)
 	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.' | awk '{gsub("_1", "");print}' `)
@@ -232,33 +250,35 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv" => "#{QC_DIR}/#{RUN_ID}/a
 		
 	if [[ $sample_id =~ ^M.* ]]; then
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc.fasta
-		output_directory=/sc/orga/scratch/kumara22/mc_out/#{RUN_ID}/clemente
-		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file
-		python #{REPO_DIR}/scripts/bwa_mapper_parse.py $output_directory
-		mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente
-		paste $output_directory/*edit* > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/clemente_postqc_edit_dist.txt
-		cp $output_directory/summary.tsv #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/summary.tsv
-	
+		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/clemente
+		mkdir -p $output_directory
+		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
 		
 	elif [[ $sample_id =~ ^Z.* ]]; then
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/zymo_mc.fasta
-		output_directory=/sc/orga/scratch/kumara22/mc_out/#{RUN_ID}/zymo
-		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file
-		python #{REPO_DIR}/scripts/bwa_mapper_parse.py $output_directory
-		mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo
-		paste $output_directory/*edit* > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/zymo_postqc_edit_dist.txt
-		cp $output_directory/summary.tsv #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/summary.tsv
-		Rscrpit #{REPO_DIR}/scripts/community_stats_zymo.R #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo
-		
-	fi
+		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/zymo
+		mkdir -p $output_directory
+		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
 
+	fi
   done
 
+  output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/clemente
+  python #{REPO_DIR}/scripts/bwa_mapper_parse.py $output_directory
+  paste $output_directory/*edit* > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/clemente_postqc_edit_dist.txt
+  cp $output_directory/summary.tsv #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/summary.tsv
+  Rscript #{REPO_DIR}/scripts/community_stats_clemente.R #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente
 
+  output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/zymo
+  python #{REPO_DIR}/scripts/bwa_mapper_parse.py $output_directory
+  paste $output_directory/*edit* > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/zymo_postqc_edit_dist.txt
+  cp $output_directory/summary.tsv #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/summary.tsv
+  Rscript #{REPO_DIR}/scripts/community_stats_zymo.R #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo
 
-SH
+ SH
 
 end
+
 # ==================
 # = create_QC_page =
 # ==================
@@ -278,9 +298,7 @@ desc "push QC info to PathogenDB tables"
 # = run_Qiime_analysis =
 # ======================
 
-
 desc "Calculate Alpha Diversity, Beta Diversity and Taxon classification for singe/multiple Runs"
-
 
 # ==============================
 # = create_Qiime_analysis_page =

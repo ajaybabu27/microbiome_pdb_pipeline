@@ -9,6 +9,7 @@ module load seqtk
 phiX_reference=/sc/orga/projects/InfectiousDisease/reference-db/phiX_control
 working_directory=$1
 output_directory=$2
+repo_directory=$3
 
 #PhiX forward and reverse libraries
 forward_lib=$working_directory/Undetermined_S0_L001_R1_001.fastq.gz 
@@ -36,7 +37,7 @@ samtools sort -@ $num_cores $output_directory/$sample_id.bam > $output_directory
 total_lib_count=(`gzip -cd $forward_lib | wc -l | awk '{print $1/4}'`)
 
 #Filter reads to output primary mapped paired reads
-./reads_per_seq.sh $output_directory/$sample_id.sorted.bam
+$repo_directory/scripts/reads_per_seq.sh $output_directory/$sample_id.sorted.bam
 
 #Get unmapped reads
 samtools view -@ $num_cores -b -f 4 $output_directory/$sample_id.sorted.bam > $output_directory/$sample_id.unmapped.bam
@@ -48,9 +49,8 @@ num_multimapped_alignments=(`samtools flagstat $output_directory/$sample_id.sam 
 mean_ed=(`cat $output_directory/$sample_id.sam | awk '{ print $12 }' | cut -d':' -f3 | R --slave -e 'x <- scan(file="stdin",quiet=TRUE); mean(x)' | cut -d ' ' -f2`)
 sd_ed=(`cat $output_directory/$sample_id.sam | awk '{ print $12 }' | cut -d':' -f3 | R --slave -e 'x <- scan(file="stdin",quiet=TRUE); sd(x)' | cut -d ' ' -f2`)
 	
-echo -e $total_lib_count"\t"total > $output_directory/$sample_id".sorted.seq"
+echo -e $total_lib_count"\t"total >> $output_directory/$sample_id".sorted.seq"
 echo -e $num_multimapped_alignments"\t"multimapped_alignments >> $output_directory/$sample_id".sorted.seq"
 echo -e $mean_ed"\t"mean_edit_distance >> $output_directory/$sample_id".sorted.seq"
 echo -e $sd_ed"\t"sd_edit_distance >> $output_directory/$sample_id".sorted.seq"
-
 
