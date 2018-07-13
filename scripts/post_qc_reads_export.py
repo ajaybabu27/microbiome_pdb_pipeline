@@ -1,6 +1,6 @@
 #Author: Ajay
 #Date: 07/02/2018
-#Description: Write out fasta sequences per sample after performing QC
+#Description: Write out Qiime post qc fasta sequences per sample after performing QC. Takes the QC directory as input argument. 
 
 import os
 import sys
@@ -10,14 +10,17 @@ import copy
 
 working_directory=sys.argv[1]
 
-
+#Store fasta sequences in Biopython object. 
 record_dict = SeqIO.to_dict(SeqIO.parse(working_directory+"/all_samples_QC/dada2/dna-sequences.fasta", "fasta"))
 
+#Store biome file in pandas object.
 tsv_file=open(working_directory+'/all_samples_QC/dada2/feature-table.tsv','r')
 df=pd.read_csv(tsv_file, header=1,sep='\t')
 
+#Store feature IDs (fasta file header names)
 rep_seq_list=df['#OTU ID']
 
+#Iterate through each column (sample names) in pandas dataframe to print out per sample fasta file.
 for column in df:
 	
 	if column=='#OTU ID':
