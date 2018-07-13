@@ -2,7 +2,7 @@
 Computational workflows for analyzing 16S and metagenomics data 
 ## Requirements
 
-Pipeline currently works on Minerva HPC environment. With little tweaking it should be portable in any environment of choice. Users need access to Minerva and InfectiousDisease project. Users also need access to PathogenDB database to upload meta and final data points for further query. NOTE: This pipeline currently only contains components for the 16S workflow and the metagenomics workflow will be added in the future. 
+Pipeline currently works on Minerva HPC environment. With little tweaking it should be portable in any environment of choice. Users need access to Minerva and InfectiousDisease project. Users also need access to PathogenDB database to query and upload meta and final data points for further query. NOTE: This pipeline currently only contains components for the 16S workflow and the metagenomics workflow will be added in the future. 
 ## Usage
 
 First, clone this repository to a directory and `cd` into it.  You'll want to configure your environment first using the included script:
