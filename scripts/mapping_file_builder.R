@@ -7,7 +7,6 @@ args = matrix(c('work_dir'  , 'w', 2, "character", "Working directory",
                 'dbname'    , 'n', 2, "character", "Database name",
                 'dbuser'    , 'u', 2, "character", "Database username",
                 'dbpass'    , 'p', 2, "character", "Database password",
-                'output'    , 'o', 2, "character", "Output file",
                 'help'      , 'h', 0, "logical",   "Brief help message"
 ), ncol=5,byrow=T);
 opt  = getopt(args);
@@ -16,7 +15,7 @@ opt  = getopt(args);
 if ( is.null(opt$dbhost)    ) { opt$dbhost    = "data1.hpc.mssm.edu"    }
 if ( is.null(opt$dbname)    ) { opt$dbname    = "vanbah01_pathogens" }
 if ( is.null(opt$dbuser)    ) { opt$dbuser    = "pathogendb_rw"      }
-if ( is.null(opt$output)    ) { opt$output    = "tmp"      }
+
 
 # Set up database connection
 mydb = dbConnect(MySQL(), user=opt$dbuser, password=opt$dbpass, dbname=opt$dbname, host=opt$dbhost)
