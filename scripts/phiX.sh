@@ -20,15 +20,18 @@ mkdir -p $output_directory
 fasta_file=$phiX_reference/PhiX-reference-genome.fasta
 sample_id=PhiXQC
 
+
+num_cores=(`grep -c ^processor /proc/cpuinfo`)
+
 #Map fastq files to reference. 
-bwa mem -t 12 $fasta_file $forward_lib $reverse_lib > $output_directory/$sample_id.sam 2> $output_directory/$sample_id.log
+bwa mem -t $num_cores $fasta_file $forward_lib $reverse_lib > $output_directory/$sample_id.sam 2> $output_directory/$sample_id.log
 
 echo preqc"_"$sample_id > $output_directory/$sample_id"_"edit_dist.txt
 cat $output_directory/$sample_id.sam | awk '{ if (NR>11) {print $12} }' | cut -d':' -f3 >> $output_directory/$sample_id"_"edit_dist.txt
 
-samtools view -@ 12 -bS $output_directory/$sample_id.sam -o $output_directory/$sample_id.bam 
+samtools view -@ $num_cores -bS $output_directory/$sample_id.sam -o $output_directory/$sample_id.bam 
 
-samtools sort -@ 12 $output_directory/$sample_id.bam > $output_directory/$sample_id.sorted.bam
+samtools sort -@ $num_cores $output_directory/$sample_id.bam > $output_directory/$sample_id.sorted.bam
 
 total_lib_count=(`gzip -cd $forward_lib | wc -l | awk '{print $1/4}'`)
 
@@ -36,7 +39,7 @@ total_lib_count=(`gzip -cd $forward_lib | wc -l | awk '{print $1/4}'`)
 ./reads_per_seq.sh $output_directory/$sample_id.sorted.bam
 
 #Get unmapped reads
-samtools view -@ 12 -b -f 4 $output_directory/$sample_id.sorted.bam > $output_directory/$sample_id.unmapped.bam
+samtools view -@ $num_cores -b -f 4 $output_directory/$sample_id.sorted.bam > $output_directory/$sample_id.unmapped.bam
 
 samtools bam2fq $output_directory/$sample_id.unmapped.bam | seqtk seq -A > $output_directory/umapped.fa
 

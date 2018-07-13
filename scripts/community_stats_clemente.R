@@ -125,8 +125,10 @@ col_sel<-colnames(out_data)[grepl(sample_group,colnames(out_data))]
 p1<-ggpairs(out_data,axisLabels='internal',lower=list(mapping = aes(colour = color,size=GC.genome,shape=gram)),columns = col_sel)
 p2<-ggcorr(out_data[,c(col_sel)],label_round = 2,label = T,label_color = "black")
 p<-length(col_sel)
+pdf(paste("summary_mc_",sample_group,"_corr_plot_dna_conc.pdf",sep='',onefile=FALSE), width=15, height=15)
 print(combo_plot(p,p1,p2))
-ggsave(paste("summary_mc_",sample_group,"_corr_plot_dna_conc.pdf",sep=''), width = 50, height = 30,unit='cm',dpi=200)
+dev.off()
+
 
 }
 

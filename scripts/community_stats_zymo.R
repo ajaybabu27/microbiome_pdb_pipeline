@@ -105,10 +105,11 @@ p1<-ggpairs(out_data,axisLabels='internal',lower=list(mapping = aes(colour = col
 p2<-ggcorr(out_data[,c(2:4)],label_round = 2,label = T,label_color = "black")
 p<-3
 
+pdf("summary_mc_zymo_corr_plot_zymobar.pdf", width=15, height=15)
 print(combo_plot(p,p1,p2))
-
-ggsave("summary_mc_zymo_corr_plot_zymobar.pdf", width = 50, height = 30,unit='cm',dpi=200)
-ggsave("summary_mc_zymo_corr_plot_zymobar.png", width = 50, height = 30,unit='cm',dpi=200)
+dev.off()
+#ggsave("summary_mc_zymo_corr_plot_zymobar.pdf", width = 50, height = 30,unit='cm',dpi=200)
+#ggsave("summary_mc_zymo_corr_plot_zymobar.png", width = 50, height = 30,unit='cm',dpi=200)
 
 library(reshape2)
 library(ggplot2)
