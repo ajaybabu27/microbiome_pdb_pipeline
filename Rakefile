@@ -162,13 +162,13 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" => "#{QC_DIR}/#{RUN_ID}/al
   module load python py_packages
   python #{REPO_DIR}/scripts/post_qc_reads_export.py #{QC_DIR}/#{RUN_ID}
  
-  #mkdir -p /tmp/db_custom_06192018
-  #rm -r /tmp/db_custom_06192018/*
-  #cp /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/* /tmp/db_custom_06192018
+  mkdir -p /tmp/db_custom_06192018
+  rm -r /tmp/db_custom_06192018/*
+  cp /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/* /tmp/db_custom_06192018
 
-  #cp -r /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/taxonomy /tmp/db_custom_06192018
+  cp -r /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/taxonomy /tmp/db_custom_06192018
 
-  #num_cores=(`grep -c ^processor /proc/cpuinfo`)
+  num_cores=(`grep -c ^processor /proc/cpuinfo`)
 
   echo -e "#SampleID\tBarcodeSequence\tLinkerPrimerSequence\tDescription\tunclassified_reads\tbacteria_reads\tviral_reads\tcdiff_reads\thuman_reads" > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
   sample_directory=#{QC_DIR}/#{RUN_ID}
