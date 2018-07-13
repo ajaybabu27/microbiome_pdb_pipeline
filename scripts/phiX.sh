@@ -1,6 +1,6 @@
 #Author: Ajay
 #Date : 10/10/2017
-#Description: Get read mapping stats for PhiX spike in control. 
+#Description: Get read mapping stats for PhiX spike in control
 
 module load R
 module load fastqc
@@ -12,7 +12,7 @@ output_directory=$2
 repo_directory=$3
 
 #PhiX forward and reverse libraries
-forward_lib=$working_directory/Undetermined_S0_L001_R1_001.fastq.gz 
+forward_lib=$working_directory/Undetermined_S0_L001_R1_001.fastq.gz
 reverse_lib=$working_directory/Undetermined_S0_L001_R2_001.fastq.gz
 
 mkdir -p $output_directory
