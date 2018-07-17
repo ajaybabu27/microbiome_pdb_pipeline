@@ -59,10 +59,11 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv" do |t|
  system <<-SH or abort
 
     sample_directory=#{FASTQ_DIR}/#{RUN_ID}
+    output_directory=#{QC_DIR}/#{RUN_ID}
     
-    mkdir -p $sample_directory/all_samples_QC
+    mkdir -p $output_directory/all_samples_QC
 	
-    echo -e sample-id,absolute-filepath,direction > $sample_directory/all_samples_QC/manifest.csv
+    echo -e sample-id,absolute-filepath,direction > $output_directory/all_samples_QC/manifest.csv
     
     for sample in $sample_directory/*/ ; do	
 
@@ -77,10 +78,10 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv" do |t|
 
 	
 	forward_lib=$sample"0_Raw"/$sample_id"_"R1.fastq.gz
-        reverse_lib=$sample"0_Raw"/$sample_id"_"R2.fastq.gz
+    reverse_lib=$sample"0_Raw"/$sample_id"_"R2.fastq.gz
 
-        echo -e $sample_id_mod","$forward_lib",forward" >> $sample_directory/all_samples_QC/manifest.csv
-        echo -e $sample_id_mod","$reverse_lib",reverse" >> $sample_directory/all_samples_QC/manifest.csv
+    echo -e $sample_id_mod","$forward_lib",forward" >> $output_directory/all_samples_QC/manifest.csv
+    echo -e $sample_id_mod","$reverse_lib",reverse" >> $output_directory/all_samples_QC/manifest.csv
 	
     done     
   
@@ -124,11 +125,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
     --p-trunc-len-f 0 \
     --p-trunc-len-r 0 \
     --p-n-threads 0  \
-    --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2
-     
-    #Output metadata file
-    Rscript #{REPO_DIR}/scripts/mapping_file_builder.R -w #{QC_DIR}/#{RUN_ID}/all_samples_QC -p #{ENV['PDBPASS']}
-
+    --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2   
     
  SH
 
@@ -140,8 +137,8 @@ end
 
 
 desc "Export sequences that pass Qiime QC and run Kraken for contaminant analysis"
-task :run_kraken => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv"]
-file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" do |t|
+task :run_kraken => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv"]
+file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" do |t|
 
  system <<-SH or abort
 
@@ -209,6 +206,14 @@ ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.krepo
 ktImportTaxonomy #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport -t 5 -m 3 -s 0 -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.kronaQC.html
 
 
+  module purge
+  module load R
+     
+  #Output metadata file
+  Rscript #{REPO_DIR}/scripts/mapping_file_builder.R -w #{QC_DIR}/#{RUN_ID}/all_samples_QC -p #{ENV['PDBPASS']}
+
+
+
  SH
 
 end
@@ -218,8 +223,8 @@ end
 # =============
 
 desc "Calculate abundance and edit distances by comparing expected vs oberved MC measures"
-task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv"]
-file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping2.tsv" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" do |t|
+task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf"]
+file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" do |t|
 
  system <<-SH or abort
   module purge
@@ -283,17 +288,30 @@ end
 # = create_QC_page =
 # ==================
 
-desc "Create a landing page for all QC results"
+#desc "Create a landing page for all QC results"
 
-#Add multiQC,Qiime QC and MC QC charts
+#Add Qiime QC and MC QC charts
 #Link out to Biom File, Metadata file
 
 # =================
 # = upload_QC_pdb =
 # =================
 
-desc "push QC info to PathogenDB tables"
+#desc "push QC info to PathogenDB tables"
 
+#task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf"]
+#file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" do |t| 
+
+# system <<-SH or abort
+
+#  module purge
+#  module load R
+
+#  Rscript #{REPO_DIR}/scripts/16S_upload_results.R -w #{QC_DIR}/#{RUN_ID} -r #{RUN_ID} 
+
+# SH
+
+#end
 # ======================
 # = run_Qiime_analysis =
 # ======================
