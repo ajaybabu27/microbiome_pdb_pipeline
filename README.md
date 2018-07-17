@@ -26,7 +26,7 @@ When firing up the pipeline in a new shell, **remember to always `source scripts
 ## Workflows
 
 There are two main workflows,
-1) 16S Workflow
+1) [16S Workflow](https://github.com/ajaybabu27/microbiome_pdb_pipeline/blob/master/docs/16s_rake_pipeline.md)
 2) Metagenomics Workflow
 
 Click on the links above to read about more details about the tasks that are part of these workflows. 
