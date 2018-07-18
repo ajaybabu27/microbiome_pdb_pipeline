@@ -1,7 +1,13 @@
+#Author: Ajay
+#Date: 10/10/2017
+#Description: Generate abundance charts for Clemente Lab Microbial Community libraries
+
 args = commandArgs(trailingOnly=TRUE)
 
+#Sets the directory containing abundance tables of Clemente MC libraries as working directory. 
 setwd(args[1])
 
+#Read abundance file
 summary_df=read.table(file='summary.tsv',sep='\t',header=T)
 
 row.names(summary_df)<-summary_df$Sample
@@ -11,7 +17,7 @@ summary_df<-summary_df[,c(rownames(theoretical_df),'total')]
 summary_df<-summary_df[grep('M',rownames(summary_df)),] #for run3
 summary_df$total_mapped_reads=rowSums(summary_df[,c(1:15)]) 
 summary_df$primary_mapped_per<-(summary_df$total_mapped_reads/summary_df$total)*100
-summary_df_per<-(summary_df[,c(1:15)]/summary_df$total_mapped_reads)*100
+summary_df_per<-(summary_df[,c(1:15)]/summary_df$total_mapped_reads)*100 # Convert to %
 
 theoretical_df[,c(1:5)]=100*theoretical_df[,c(1:5)]
 theoretical_df_t=t(theoretical_df[,c('M1','M6','M13','M14','M15')])
@@ -19,27 +25,26 @@ theoretical_df_t=t(theoretical_df[,c('M1','M6','M13','M14','M15')])
 jose_summary_df<-rbind(summary_df_per,theoretical_df_t)
 summary_df_per_t<-t(jose_summary_df)
 class(summary_df_per_t)<-"numeric"
-#write.table(summary_df_per_t,file='clemente_corr_plot_df.tsv',sep='\t',col.names = NA)
 jose_summary_df$expt_cond<-row.names(jose_summary_df)
 jose_summary_df$expt_cond<-as.factor(jose_summary_df$expt_cond)
 
-cor_tab2<-cor(summary_df_per_t)
-cor_tab2<-as.data.frame(cor_tab2)
-
-cor_tab<-as.matrix(dist(jose_summary_df))
+#Calculate correlation
+cor_tab<-cor(summary_df_per_t)
 cor_tab<-as.data.frame(cor_tab)
 
+#Calculate euclidean distance
+dist_tab<-as.matrix(dist(jose_summary_df))
+dist_tab<-as.data.frame(dist_tab)
+
 cor_tab_plot_vals<-data.frame(expt_cond=c("M1","M1.1","M1.2","M1.L", "M6","M6.L", "M13","M13.L"),
-                                  cor_value=c('0_1',paste(round(cor_tab['M1','M1.1'],2),round(cor_tab2['M1','M1.1'],2),sep='_'),
-                                              paste(round(cor_tab['M1','M1.2'],2),round(cor_tab2['M1','M1.2'],2),sep='_'),
-                                              paste(round(cor_tab['M1','M1.L'],2),round(cor_tab2['M1','M1.L'],2),sep='_'),
-                                              '0_1',paste(round(cor_tab['M6','M6.L'],2),round(cor_tab2['M6','M6.L'],2),sep='_'),
-                                              '0_1',paste(round(cor_tab['M13','M13.L'],2),round(cor_tab2['M13','M13.L'],2),sep='_')))
+                                  cor_value=c('0_1',paste(round(dist_tab['M1','M1.1'],2),round(cor_tab['M1','M1.1'],2),sep='_'),
+                                              paste(round(dist_tab['M1','M1.2'],2),round(cor_tab['M1','M1.2'],2),sep='_'),
+                                              paste(round(dist_tab['M1','M1.L'],2),round(cor_tab['M1','M1.L'],2),sep='_'),
+                                              '0_1',paste(round(dist_tab['M6','M6.L'],2),round(cor_tab['M6','M6.L'],2),sep='_'),
+                                              '0_1',paste(round(dist_tab['M13','M13.L'],2),round(cor_tab['M13','M13.L'],2),sep='_')))
 
-
-
-
-
+								
+#Draw stacked abundance plot comparing samples with theoretical distribution. 								
 library(reshape2)
 library(ggplot2)
 summary_df_per_melt<-melt(jose_summary_df)
@@ -70,11 +75,11 @@ ggplot(data=summary_df_per_melt, aes(x = summary_df_per_melt$expt_cond, y = summ
         axis.title=element_text(size=35,face="bold"))+
   expand_limits(y = max(100 * 1.05))+
   geom_point(aes(x = summary_df_per_melt$expt_cond,y=summary_df_per_melt$primary_mapped_per),color='white',size=5,show.legend=F)
+
 ggsave("summary_mc_clemente_stacked.pdf", width = 126, height = 126,unit='cm',dpi=200)
 ggsave("summary_mc_clemente_stacked.png", width = 126, height = 126,unit='cm',dpi=200)
 
-#write.table(summary_df_per_melt,file='mc_melt.tsv',sep='\t',row.names = F)
-
+#Draw pairwise scatter plot comparing samples with theoretical distribution. 		
 library(GGally)
 library(scales)
 out_data<-as.data.frame(summary_df_per_t)
@@ -89,6 +94,7 @@ out_data$color<-factor(out_data$color,levels = out_data$color)
 out_data<-out_data[order(out_data$gram,out_data$GC.genome),]
 out_data$color<-as.character(out_data$color)
 out_data$color<-factor(out_data$color,levels=unique(out_data$color))
+
 
 combo_plot<-function(p,p1,p2){
   g2 <- ggplotGrob(p2)
@@ -112,26 +118,28 @@ out_data[2:11]=log2(out_data[2:11])
 
 for (sample_group in c('M1','M6','M13')){
 
-if (sample_group=='M1'){
-  col_sel<-colnames(out_data)[grepl('M1\\.',colnames(out_data))]
-  col_sel<-c(col_sel,'M1')
-  
-}
-else{
-col_sel<-colnames(out_data)[grepl(sample_group,colnames(out_data))]
-}
-#col_sel<-c(2,3,4,20,7)
-#col_sel[2:3]<-col_sel[3:2]
-p1<-ggpairs(out_data,axisLabels='internal',lower=list(mapping = aes(colour = color,size=GC.genome,shape=gram)),columns = col_sel)
-p2<-ggcorr(out_data[,c(col_sel)],label_round = 2,label = T,label_color = "black")
-p<-length(col_sel)
-pdf(paste("summary_mc_",sample_group,"_corr_plot_dna_conc.pdf",sep='',onefile=FALSE), width=15, height=15)
-print(combo_plot(p,p1,p2))
-dev.off()
+	if (sample_group=='M1'){
+	  col_sel<-colnames(out_data)[grepl('M1\\.',colnames(out_data))]
+	  col_sel<-c(col_sel,'M1')
+	  
+	}
+	
+	else{
+		col_sel<-colnames(out_data)[grepl(sample_group,colnames(out_data))]
+	}
+	
+	p1<-ggpairs(out_data,axisLabels='internal',lower=list(mapping = aes(colour = color,size=GC.genome,shape=gram)),columns = col_sel)
+	p2<-ggcorr(out_data[,c(col_sel)],label_round = 2,label = T,label_color = "black")
+	p<-length(col_sel)
+	
+	pdf(paste("summary_mc_",sample_group,"_corr_plot_dna_conc.pdf",sep='',onefile=FALSE), width=15, height=15)
+	print(combo_plot(p,p1,p2))
+	dev.off()
 
 
 }
 
+#Draw edit distance charts
 library(reshape2)
 library(ggplot2)
 library(scales)
@@ -170,8 +178,6 @@ test_m<-melt(test,na.rm = T)
 
 list_plot=list()
 
-
-#for (x in zymo_order){
 for (x in levels(test_m$variable)){
   
   test_m_temp<-test_m[test_m$variable==x,]

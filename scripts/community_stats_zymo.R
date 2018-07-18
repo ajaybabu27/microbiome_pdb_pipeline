@@ -1,7 +1,13 @@
+#Author: Ajay
+#Date: 10/10/2017
+#Description: Generate abundance charts for Zymo Microbial Community libraries
+
 args = commandArgs(trailingOnly=TRUE)
 
+#Sets the directory containing abundance tables of Zymo MC libraries as working directory. 
 setwd(args[1])
 
+#Read abundance file
 summary_df=read.table(file='summary.tsv',sep='\t',header=T)
 
 row.names(summary_df)<-summary_df$Sample
@@ -19,23 +25,26 @@ row.names(summary_df_per)[nrow(summary_df)+1]<-'Theoretical'
 summary_df_per_t<-t(summary_df_per)
 summary_df_per$expt_cond<-row.names(summary_df_per)
 
-cor_tab<-as.matrix(dist(summary_df_per))
+#Calculate euclidean distance
+dist_tab<-as.matrix(dist(summary_df_per))
+dist_tab<-as.data.frame(dist_tab)
+dist_tab<-dist_tab[nrow(summary_df)+1,]
+dist_tab<-t(dist_tab)
+dist_tab<-as.data.frame(dist_tab)
+dist_tab$Theoretical<-round(dist_tab$Theoretical, 2)
+
+#Calculate correlation
+cor_tab<-cor(summary_df_per_t)
 cor_tab<-as.data.frame(cor_tab)
 cor_tab<-cor_tab[nrow(summary_df)+1,]
 cor_tab<-t(cor_tab)
 cor_tab<-as.data.frame(cor_tab)
 cor_tab$Theoretical<-round(cor_tab$Theoretical, 2)
 
-cor_tab2<-cor(summary_df_per_t)
-cor_tab2<-as.data.frame(cor_tab2)
-cor_tab2<-cor_tab2[nrow(summary_df)+1,]
-cor_tab2<-t(cor_tab2)
-cor_tab2<-as.data.frame(cor_tab2)
-cor_tab2$Theoretical<-round(cor_tab2$Theoretical, 2)
-
-cor_tab$Theoretical<-paste(cor_tab$Theoretical,cor_tab2$Theoretical,sep="_")
+cor_tab$Theoretical<-paste(dist_tab$Theoretical,cor_tab$Theoretical,sep="_")
 
 
+#Draw stacked abundance plot comparing samples with theoretical distribution. 	
 library(reshape2)
 library(ggplot2)
 summary_df_per_melt<-melt(summary_df_per)
@@ -68,6 +77,7 @@ ggplot(data=summary_df_per_melt, aes(x = summary_df_per_melt$expt_cond, y = summ
 ggsave("summary_mc_zymo_stacked.pdf", width = 126, height = 126,unit='cm',dpi=200)
 ggsave("summary_mc_zymo_stacked.png", width = 126, height = 126,unit='cm',dpi=200)
 
+#Draw pairwise scatter plot comparing samples with theoretical distribution. 		
 library(GGally)
 library(scales)
 out_data<-as.data.frame(summary_df_per_t)
@@ -83,22 +93,22 @@ out_data$color<-as.character(out_data$color)
 out_data$color<-factor(out_data$color,levels=unique(out_data$color))
 
 combo_plot<-function(p,p1,p2){
-g2 <- ggplotGrob(p2)
-colors <- g2$grobs[[6]]$children[[3]]$gp$fill
-# Change background color to tiles in the upper triangular matrix of plots 
-idx <- 1
-for (k1 in 1:(p-1)) {
-  for (k2 in (k1+1):p) {
-    plt <- getPlot(p1,k1,k2) +
-      theme(panel.background = element_rect(fill = colors[idx], color="white"),
-            panel.grid.major = element_line(color=colors[idx])
-      )+scale_x_continuous(breaks = seq(0, 30, by = 6)) +
-      scale_y_continuous(breaks = seq(0, 30, by = 6))
-    p1 <- putPlot(p1,plt,k1,k2)
-    idx <- idx+1
-  }
-}
-return(p1)
+	g2 <- ggplotGrob(p2)
+	colors <- g2$grobs[[6]]$children[[3]]$gp$fill
+	# Change background color to tiles in the upper triangular matrix of plots 
+	idx <- 1
+	for (k1 in 1:(p-1)) {
+	  for (k2 in (k1+1):p) {
+		plt <- getPlot(p1,k1,k2) +
+		  theme(panel.background = element_rect(fill = colors[idx], color="white"),
+				panel.grid.major = element_line(color=colors[idx])
+		  )+scale_x_continuous(breaks = seq(0, 30, by = 6)) +
+		  scale_y_continuous(breaks = seq(0, 30, by = 6))
+		p1 <- putPlot(p1,plt,k1,k2)
+		idx <- idx+1
+	  }
+	}
+	return(p1)
 }
 
 p1<-ggpairs(out_data,axisLabels='internal',lower=list(mapping = aes(colour = color,size=GC.genome,shape=gram)),columns = c(2:4))
@@ -111,6 +121,7 @@ dev.off()
 #ggsave("summary_mc_zymo_corr_plot_zymobar.pdf", width = 50, height = 30,unit='cm',dpi=200)
 #ggsave("summary_mc_zymo_corr_plot_zymobar.png", width = 50, height = 30,unit='cm',dpi=200)
 
+#Draw edit distance charts
 library(reshape2)
 library(ggplot2)
 library(scales)

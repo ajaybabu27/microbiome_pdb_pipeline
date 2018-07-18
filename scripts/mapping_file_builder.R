@@ -1,3 +1,7 @@
+#Author: Ajay
+#Date: 10/10/2017
+#Description: Generate mapping file/meta data file for the 16S run.
+
 library(getopt)
 library(RMySQL)
 library(DBI)
@@ -20,7 +24,7 @@ if ( is.null(opt$dbuser)    ) { opt$dbuser    = "pathogendb_rw"      }
 # Set up database connection
 mydb = dbConnect(MySQL(), user=opt$dbuser, password=opt$dbpass, dbname=opt$dbname, host=opt$dbhost)
 
-#Load mapping file
+#Load skeleton mapping file
 setwd(opt$work_dir)
 raw_mapping_file<-read.table('mapping.tsv',header = T,sep='\t',comment.char = "",check.names = F)
 raw_mapping_file$SampleID<-gsub("\\..*","",raw_mapping_file$`#SampleID`)
@@ -54,11 +58,7 @@ mapping_file$combo<-interaction(mapping_file$CDItestResult,mapping_file$CaseCont
 mapping_file$combo=factor(as.character(mapping_file$combo),levels = c("CD Pos.case","CD Neg.case","CD Neg.control","CD Neg.healthy control"),
                                                  labels=c("CD Pos Case samples","CD Neg Case samples","Matched Control Samples","Healthy control Samples"))
 
-
 mapping_file$SampleNameDate<-interaction(mapping_file$`#SampleID`, mapping_file$SamplingDate)
-
-#write.table(file='mapping_final.tsv',mapping_file,row.names = F,sep='\t')
-
 
 #ABX Info addition
 
@@ -69,39 +69,39 @@ mapping_file$ABX_admin_on_sample_collection<-NA
 mapping_file$ABX_admin_24hrprior_sample_collection<-NA
 
 for (x in 1:nrow(mapping_file)){
-erap_id=mapping_file[x,'eRAP_ID']
-if (is.na(erap_id)){
-  next
-}
-sample_date=as.Date(mapping_file[x,'SamplingDate'])
-abx_subset=abx_table[abx_table$eRAP_ID==erap_id,]
-abx_subset$order_start_date<-as.Date(abx_subset$order_start_date)
-abx_subset$order_end_date<-as.Date(abx_subset$order_end_date)
-abx_list=c()
-abx_list_24=c()
-for (y in 1:nrow(abx_subset)){
-  if ( (sample_date >= abx_subset[y,'order_start_date'] & sample_date <= abx_subset[y,'order_end_date'] )  ){
-    
-    abx_list=c(abx_list,abx_subset[y,'synonym'])        
-    if((sample_date - abx_subset[y,'order_start_date'])>=1){
-      abx_list_24=c(abx_list_24,abx_subset[y,'synonym'])
-    }
-    
-  }
-  
-  if ((sample_date - abx_subset[y,'order_end_date'])==1){
-    abx_list_24=c(abx_list_24,abx_subset[y,'synonym'])
-  }
-  
-  }
+	erap_id=mapping_file[x,'eRAP_ID']
+	if (is.na(erap_id)){
+	  next
+	}
+	sample_date=as.Date(mapping_file[x,'SamplingDate'])
+	abx_subset=abx_table[abx_table$eRAP_ID==erap_id,]
+	abx_subset$order_start_date<-as.Date(abx_subset$order_start_date)
+	abx_subset$order_end_date<-as.Date(abx_subset$order_end_date)
+	abx_list=c()
+	abx_list_24=c()
+	for (y in 1:nrow(abx_subset)){
+		if ( (sample_date >= abx_subset[y,'order_start_date'] & sample_date <= abx_subset[y,'order_end_date'] )  ){
+		
+			abx_list=c(abx_list,abx_subset[y,'synonym'])        
+			if((sample_date - abx_subset[y,'order_start_date'])>=1){
+				abx_list_24=c(abx_list_24,abx_subset[y,'synonym'])
+			}
+		
+		}
+	  
+		if ((sample_date - abx_subset[y,'order_end_date'])==1){
+			abx_list_24=c(abx_list_24,abx_subset[y,'synonym'])
+		}
+	  
+	 }
 
-  if(length(abx_list)>0){
-    mapping_file[x,'ABX_admin_on_sample_collection']<-paste(unique(abx_list), collapse = ';')
-  }
+	if(length(abx_list)>0){
+		mapping_file[x,'ABX_admin_on_sample_collection']<-paste(unique(abx_list), collapse = ';')
+	}
 
-  if(length(abx_list_24)>0){
-    mapping_file[x,'ABX_admin_24hrprior_sample_collection']<-paste(unique(abx_list_24), collapse = ';')
-  }
+	if(length(abx_list_24)>0){
+		mapping_file[x,'ABX_admin_24hrprior_sample_collection']<-paste(unique(abx_list_24), collapse = ';')
+	}
 }
 
 write.table(file='mapping_final.tsv',mapping_file,row.names = F,sep='\t')

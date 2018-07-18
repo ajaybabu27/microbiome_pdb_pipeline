@@ -31,7 +31,7 @@ for fn in os.listdir(working_directory):
 sample_list=sorted(dict_samples.iterkeys())
 organism_list=sorted(dict_samples[sample_list[1]].iterkeys())
 
-#Iterate through the dictionary to store the values in a unified summary file. 
+#Iterate through the dictionary to print the values in a unified summary file. 
 with open(working_directory+'/summary.tsv','w') as bwa_out_summ:
 
 	bwa_out_summ.write("Sample"+'\t'+ '\t'.join(organism_list)+"\n")
