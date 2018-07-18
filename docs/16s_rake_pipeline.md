@@ -18,7 +18,9 @@ FASTQ_FOLDER
 │   ├── 0_Raw 
 │       ├── Sample_ID_R1.fastq.gz 
 │       └── Sample_ID_R2.fastq.gz 
-│   
+├── Sample_ID 2
+├── Sample_ID 3
+├── Sample_ID N
 ├── Undetermined_S0_L001_R1_001.fastq.gz (Non-barcoded forward reads) 
 ├── Undetermined_S0_L001_R2_001.fastq.gz (Non-barcoded reverse reads) 
 ```
