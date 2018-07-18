@@ -13,14 +13,15 @@ Detailed description of tasks explaining workflows from QC to various analysis s
 
 The first task create_manifest_file requires the folder structure described below. 
 
-FASTQ_FOLDER 
-|->SAMPLE_ID  
-   |->0_RAW 
-      |-> SAMPLE_ID_R1.fastq.gz (forward reads) 
-	  |-> SAMPLE_ID_R2.fastq.gz (reverse reads) 
-|->Undetermined_S0_L0001_R1_001.fastq.gz (Non-barcoded forward reads) 
-|->Undetermined_S0_L0001_R2_001.fastq.gz (Non-barcoded reverse reads) 
-
+FASTQ_FOLDER
+├── Sample_ID
+│   ├── 0_Raw 
+│       ├── Sample_ID_R1.fastq.gz
+│       └── Sample_ID_R2.fastq.gz 
+│   
+├── Undetermined_S0_L001_R1_001.fastq.gz (Non-barcoded forward reads) 
+├── Undetermined_S0_L001_R2_001.fastq.gz (Non-barcoded reverse reads)
+ 
 
 
 
