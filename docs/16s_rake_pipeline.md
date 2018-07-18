@@ -13,7 +13,7 @@ Detailed description of tasks explaining workflows from QC to various analysis s
 
 The first task create_manifest_file requires the folder structure described below. 
 
-FASTQ_FOLDER 
+FASTQ_FOLDER  
 ├── Sample_ID 
 │   ├── 0_Raw 
 │       ├── Sample_ID_R1.fastq.gz 
