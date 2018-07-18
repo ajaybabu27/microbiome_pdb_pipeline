@@ -11,7 +11,7 @@ Detailed description of tasks explaining workflows from QC to various analysis s
 
 ### Folder structure for directory containing FASTQ raw reads 
 
-The first task create_manifest_file requires the folder structure described below. 
+The first task create_manifest_file requires the folder structure described below:: 
 
 FASTQ_FOLDER  
 ├── Sample_ID 
