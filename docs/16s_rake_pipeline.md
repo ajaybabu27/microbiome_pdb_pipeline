@@ -4,14 +4,14 @@ Detailed description of tasks explaining workflows from QC to various analysis s
 
 ## Flow chart of 16S Pipeline 
 
-![16s_rake_pipeline.png](https://github.com/ajaybabu27/microbiome_pdb_pipeline/blob/master/docs/16s_rake_pipeline.jpg) 
+![16s_rake_pipeline.png](https://github.com/ajaybabu27/microbiome_pdb_pipeline/blob/master/docs/16s_rake_pipeline.jpg)
 
 
-## Requirements 
+## Requirements
 
 ### Folder structure for directory containing FASTQ raw reads 
 
-The first task create_manifest_file requires the folder structure described below:: 
+The first task create_manifest_file requires the folder structure described below:
 ```
 FASTQ_FOLDER
 ├── Sample_ID
