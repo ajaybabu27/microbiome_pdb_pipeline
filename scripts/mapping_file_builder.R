@@ -16,7 +16,7 @@ args = matrix(c('work_dir'  , 'w', 2, "character", "Working directory",
 opt  = getopt(args);
 
 # Specify default argument values
-if ( is.null(opt$dbhost)    ) { opt$dbhost    = "data1.hpc.mssm.edu"    }
+if ( is.null(opt$dbhost)    ) { opt$dbhost    = "data1"    }
 if ( is.null(opt$dbname)    ) { opt$dbname    = "vanbah01_pathogens" }
 if ( is.null(opt$dbuser)    ) { opt$dbuser    = "pathogendb_rw"      }
 
