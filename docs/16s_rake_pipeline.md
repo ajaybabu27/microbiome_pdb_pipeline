@@ -24,7 +24,12 @@ FASTQ_FOLDER
 ├── Undetermined_S0_L001_R1_001.fastq.gz (Non-barcoded forward reads) 
 ├── Undetermined_S0_L001_R2_001.fastq.gz (Non-barcoded reverse reads) 
 ```
+The task "run_MC_QC" currently runs analysis for Zymogen and Clemente Lab Microbial communities. The folders associated with these libraries are
+expected to be named in the following manner:
+```
 
 
+```
+Note that 
 
    

@@ -254,6 +254,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
 	query_fasta=$sample"1_"$sample_id_mod".postqc.fasta"
 		
 	if [[ $sample_id =~ ^M.* ]]; then
+	
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc.fasta
 		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/clemente
 		mkdir -p $output_directory
@@ -266,6 +267,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
 		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
 
 	fi
+	
   done
 
   output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/clemente
