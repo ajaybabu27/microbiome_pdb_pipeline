@@ -328,6 +328,8 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_table.qza" do |t|
     qiime feature-table filter-samples \
     --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
     --p-min-frequency 4000 \    
+    --m-metadata-file #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv \
+    --p-where "SampleType='Stool'" \
     --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_table.qza
 
   SH
