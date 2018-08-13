@@ -7,6 +7,7 @@ library(RMySQL)
 library(DBI)
 
 args = matrix(c('work_dir'  , 'w', 2, "character", "Working directory",
+                'run_id'    , 'r', 2, "character", "Illumina Run ID" ,
                 'dbhost'    , 'x', 2, "character", "Database host",
                 'dbname'    , 'n', 2, "character", "Database name",
                 'dbuser'    , 'u', 2, "character", "Database username",
@@ -47,7 +48,7 @@ mapping_file<-merge(raw_mapping_file,cdi_cohort_table2,by.x='SampleID',by.y='spe
 mapping_file$SampleID<-NULL
 mapping_file$SampleType<-'Stool'
 mapping_file$`#SampleID`<-as.character(mapping_file$`#SampleID`)
-mapping_file$SampleType[grepl('Empty|M1|M6|M13|Zymo|HC|Neg',mapping_file$`#SampleID`)]<-mapping_file$`#SampleID`[grepl('Empty|M1|M6|M13|Zymo|HC|Neg',mapping_file$`#SampleID`)]
+mapping_file$SampleType[grepl('Empty|M1|M6|M13|Zymo|Neg',mapping_file$`#SampleID`)]<-mapping_file$`#SampleID`[grepl('Empty|M1|M6|M13|Zymo|Neg',mapping_file$`#SampleID`)]
 
 
 mapping_file$CaseControlAnnot[grepl('HC',mapping_file$`#SampleID`)]<-'healthy control'
@@ -103,6 +104,10 @@ for (x in 1:nrow(mapping_file)){
 		mapping_file[x,'ABX_admin_24hrprior_sample_collection']<-paste(unique(abx_list_24), collapse = ';')
 	}
 }
+
+mapping_file$ABX_admin_on_sample_collection_bool<-!is.na(mapping_file$ABX_admin_on_sample_collection)
+mapping_file$ABX_admin_24hrprior_sample_collection_bool<-!is.na(mapping_file$ABX_admin_24hrprior_sample_collection)
+mapping_file$illumina_runid<-opt$run_id
 
 write.table(file='mapping_final.tsv',mapping_file,row.names = F,sep='\t')
 

@@ -111,7 +111,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
 
     qiime cutadapt trim-paired \
     --i-demultiplexed-sequences #{QC_DIR}/#{RUN_ID}/all_samples_QC/paired-end-demux.qza \
-    --p-cores 8 \
+    --p-cores 12 \
     --p-front-f GTGCCAGCMGCCGCGGTAA \
     --p-front-r GGACTACHVGGGTWTCTAAT \
     --o-trimmed-sequences #{QC_DIR}/#{RUN_ID}/all_samples_QC/paired-end-demux-trimmed.qza
@@ -144,6 +144,9 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   module purge
   module load qiime2/2018.4
+  module load Krona
+  module load kraken/2.0.7
+  
 
   qiime tools export \
   #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
@@ -177,7 +180,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 	
 	mkdir -p $sample"2_kraken"
 	
-	/sc/orga/work/kumara22/tools/kraken2/kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" --report $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" $sample"1_"$sample_id_mod.postqc.fasta
+	kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" --report $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" $sample"1_"$sample_id_mod.postqc.fasta
 
 	ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" -t 5 -m 3 -s 0 -o $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.kronaQC.html"
 
@@ -195,7 +198,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX
 
-  /sc/orga/work/kumara22/tools/kraken2/kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --report #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport --paired #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
+  kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --report #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport --paired #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
     
   ktImportTaxonomy #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport -t 5 -m 3 -s 0 -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.kronaQC.html
 
@@ -203,7 +206,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
   module load R
      
   #Output metadata file
-  Rscript #{REPO_DIR}/scripts/mapping_file_builder.R -w #{QC_DIR}/#{RUN_ID}/all_samples_QC -p #{ENV['PDBPASS']}
+  Rscript #{REPO_DIR}/scripts/mapping_file_builder.R -w #{QC_DIR}/#{RUN_ID}/all_samples_QC -p #{ENV['PDBPASS']} -r #{RUN_ID}
 
 
 
@@ -309,6 +312,29 @@ end
 
 #end
 
+# ============================
+# = create_postQC_biome_file =
+# ============================
+
+#desc "Create a post QC biome file based on QC analysis"
+task :create_postQC_biome_file => [:check, "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_table.qza"]
+file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_table.qza" do |t|
+  
+  system <<-SH or abort
+
+    module purge
+    module load qiime2/2018.4
+   
+    qiime feature-table filter-samples \
+    --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
+    --p-min-frequency 4000 \    
+    --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_table.qza
+
+  SH
+
+
+
+end
 
 # ==========================
 # = prepare_Qiime_analysis =
