@@ -158,16 +158,11 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
   module purge
   module load python py_packages
   python #{REPO_DIR}/scripts/post_qc_reads_export.py #{QC_DIR}/#{RUN_ID}
- 
-  mkdir -p /tmp/db_custom_06192018
-  rm -r /tmp/db_custom_06192018/*
-  cp /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/* /tmp/db_custom_06192018
-
-  cp -r /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018/taxonomy /tmp/db_custom_06192018
 
   num_cores=(`grep -c ^processor /proc/cpuinfo`)
 
   echo -e "#SampleID\tBarcodeSequence\tLinkerPrimerSequence\tDescription\tunclassified_reads\tbacteria_reads\tviral_reads\tcdiff_reads\thuman_reads" > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
+
   sample_directory=#{QC_DIR}/#{RUN_ID}
   for sample in $sample_directory/*/ ; do
 
@@ -182,10 +177,9 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 	
 	mkdir -p $sample"2_kraken"
 	
-	kraken --threads 36 -db /tmp/db_custom_06192018 --output $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" --fasta-input $sample"1_"$sample_id_mod.postqc.fasta
+	/sc/orga/work/kumara22/tools/kraken2/kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" --report $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" $sample"1_"$sample_id_mod.postqc.fasta
 
-	kraken-report --db /tmp/db_custom_06192018 $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" > $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" && \
-ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" -t 5 -m 3 -s 0 -o $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.kronaQC.html"
+	ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" -t 5 -m 3 -s 0 -o $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.kronaQC.html"
 
 	unclassified_reads=(`grep "unclassified" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
 	bacteria_reads=(`grep "Bacteria" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
@@ -198,15 +192,15 @@ ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.krepo
    done
 
   #process PhiX reads
-  mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX
-  kraken --threads 36 -db /tmp/db_custom_06192018 --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --paired #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
-  
 
-  kraken-report --db /sc/orga/projects/InfectiousDisease/reference-db/kraken/db_custom_06192018 #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.txt > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport && \
-ktImportTaxonomy #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport -t 5 -m 3 -s 0 -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.kronaQC.html 
+  mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX
+
+  /sc/orga/work/kumara22/tools/kraken2/kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --report #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport --paired #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
+    
+  ktImportTaxonomy #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport -t 5 -m 3 -s 0 -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.kronaQC.html
 
   module purge
-  module load R  
+  module load R
      
   #Output metadata file
   Rscript #{REPO_DIR}/scripts/mapping_file_builder.R -w #{QC_DIR}/#{RUN_ID}/all_samples_QC -p #{ENV['PDBPASS']}
@@ -313,12 +307,64 @@ end
 # SH
 
 #end
+
+
+# ==========================
+# = prepare_Qiime_analysis =
+# ==========================
+
+desc "Prepare analysis run"
+task :prepare_Qiime_analysis => [:check, "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv"]
+file "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv" do |t|
+
+
+end
+
 # ======================
 # = run_Qiime_analysis =
 # ======================
 
 desc "Calculate Alpha Diversity, Beta Diversity and Taxon classification for singe/multiple Runs"
+task :run_Qiime_analysis => [:check, "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv"]
+file "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv" do |t|
 
+system <<-SH or abort
+
+  #Construct phylogeny for diversity analyses
+
+  
+
+  qiime alignment mafft \
+    --i-sequences #{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza \
+    --o-alignment #{ANALYSIS_DIR}/1_aligned_OTU/aligned-representative_sequences.qza \
+    --p-n-threads -1
+
+  qiime alignment mask \
+    --i-alignment #{ANALYSIS_DIR}/1_aligned_OTU/aligned-representative_sequences.qza \
+    --o-masked-alignment #{ANALYSIS_DIR}/1_aligned_OTU/masked-aligned-representative_sequences.qza
+
+  qiime phylogeny fasttree \
+    --i-alignment #{ANALYSIS_DIR}/1_aligned_OTU/masked-aligned-representative_sequences.qza \
+    --o-tree #{ANALYSIS_DIR}/1_aligned_OTU/unrooted-tree.qza \
+    --p-n-threads -1
+
+  qiime phylogeny midpoint-root \
+    --i-tree #{ANALYSIS_DIR}/1_aligned_OTU/unrooted-tree.qza \
+    --o-rooted-tree #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza
+
+  #Perform diversity analyses
+  qiime diversity core-metrics-phylogenetic \
+    --i-phylogeny #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza \
+    --i-table #{ANALYSIS_DIR}/0_merged_OTU/table.qza \
+    --p-sampling-depth 4000 \
+    --m-metadata-file #{ANALYSIS_DIR}/mapping_final.tsv \
+    --output-dir #{ANALYSIS_DIR}/2_core-metrics-results \
+    --p-n-jobs -2
+
+
+SH
+
+end
 # ==============================
 # = create_Qiime_analysis_page =
 # ==============================
