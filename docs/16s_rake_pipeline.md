@@ -6,7 +6,6 @@ Detailed description of tasks explaining workflows from QC to various analysis s
 
 ![16s_rake_pipeline.png](https://github.com/ajaybabu27/microbiome_pdb_pipeline/blob/master/docs/16s_rake_pipeline.jpg)
 
-
 ## Requirements
 
 ### Folder structure for directory containing FASTQ raw reads 
@@ -31,6 +30,26 @@ Zymo* (e.g. Zymo-1,Zymo-2)
 M* (e.g. M1,M6,M13)
 ```
 Note that these libraries start with letters Z (Zymo MC) and M (Celemente MC) and it is important that the other sample IDs don't start with these letters. 
+
+The 16S FASTQ files are stored in the following location after parsing to organize the above mentioned format:
+```
+/sc/orga/projects/InfectiousDisease/microbiome-output/samples/$Run_ID
+```
+The above location also contains the initial QC file. 
+!!!Warning!!! Do not use this folder as QC output until unless you want to represent the results in PathogenDB front end website. All the files in this folders are directly linked to the website. 
+
+
+### Resource Requirements
+
+Most of the tasks require a minimum of 12 cores and memory of 50 GB at the minimum. When requesting resource through HPC consider this information. 
+
+
+### User Input Requirements
+
+Most of the tasks are automated and interlinked but some tasks are not linked to aid manual user input. The task `create_postQC_biome_file` 
+requires the user to input the minimum number of reads needed for filtering low quality libraries. This threshold should be set based on the QC analysis results. 
+
+
 
 
 
