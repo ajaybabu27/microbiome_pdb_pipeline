@@ -24,12 +24,14 @@ FASTQ_FOLDER
 ├── Undetermined_S0_L001_R1_001.fastq.gz (Non-barcoded forward reads) 
 ├── Undetermined_S0_L001_R2_001.fastq.gz (Non-barcoded reverse reads) 
 ```
-The task "run_MC_QC" currently runs analysis for Zymogen and Clemente Lab Microbial communities. The folders associated with these libraries are
+The task "run_MC_QC" currently runs analysis for Zymogen and Clemente Lab Microbial communities (MC). The folders associated with these libraries are
 expected to be named in the following manner:
 ```
-
-
+Zymo* (e.g. Zymo-1,Zymo-2)
+M* (e.g. M1,M6,M13)
 ```
-Note that 
+Note that these libraries start with letters Z (Zymo MC) and M (Celemente MC) and it is important that the other sample IDs don't start with these letters. 
+
+
 
    
