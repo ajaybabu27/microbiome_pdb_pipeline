@@ -251,13 +251,13 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc.fasta
 		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/clemente
 		mkdir -p $output_directory
-		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
+		{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
 		
 	elif [[ $sample_id =~ ^Z.* ]]; then
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/zymo_mc.fasta
 		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/zymo
 		mkdir -p $output_directory
-		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
+		{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
 
 	fi
 	
@@ -286,6 +286,7 @@ end
 #desc "Create a landing page for all QC results"
 
 #Add Qiime QC and MC QC charts
+#Filter biom table to only include QC passed samples. Remove MC and Negative and Empty samples. i.e. only include stool samples
 #Link out to Biom File, Metadata file
 
 # =================
@@ -317,6 +318,7 @@ desc "Prepare analysis run"
 task :prepare_Qiime_analysis => [:check, "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv"]
 file "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv" do |t|
 
+#Merege BIOM tables and metatables.
 
 end
 
@@ -357,7 +359,7 @@ system <<-SH or abort
     --i-phylogeny #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza \
     --i-table #{ANALYSIS_DIR}/0_merged_OTU/table.qza \
     --p-sampling-depth 4000 \
-    --m-metadata-file #{ANALYSIS_DIR}/mapping_final.tsv \
+    --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --output-dir #{ANALYSIS_DIR}/2_core-metrics-results \
     --p-n-jobs -2
 
