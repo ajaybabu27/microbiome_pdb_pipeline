@@ -41,7 +41,7 @@ The above location also contains the initial QC file.
 
 ### Resource Requirements
 
-Most of the tasks require a minimum of 12 cores and memory of 50 GB at the minimum. When requesting resource through HPC consider this information. 
+Most of the tasks require a minimum of 12 cores and memory of 50 GB at the minimum.
 
 
 ### User Input Requirements
