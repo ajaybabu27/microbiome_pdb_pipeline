@@ -24,6 +24,7 @@ RUN_ID = ENV['RUN_ID']
 FASTQ_DIR = ENV['FASTQ_DIR']
 QC_DIR = ENV['QC_DIR']
 ANALYSIS_DIR = ENV['ANALYSIS_DIR']
+READS_THRESHOLD= ENV['READS_THRESHOLD']
 
 task :env do
      
@@ -329,7 +330,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
     
     qiime feature-table filter-samples \
     --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
-    --p-min-frequency 4000 \
+    --p-min-frequency #{READS_THRESHOLD} \
     --m-metadata-file #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv \
     --p-where "SampleType='Stool'" \
     --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib.qza
@@ -399,7 +400,7 @@ system <<-SH or abort
   qiime diversity core-metrics-phylogenetic \
     --i-phylogeny #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza \
     --i-table #{ANALYSIS_DIR}/0_merged_OTU/table.qza \
-    --p-sampling-depth 4000 \
+    --p-sampling-depth #{READS_THRESHOLD} \
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --output-dir #{ANALYSIS_DIR}/2_core-metrics-results \
     --p-n-jobs -1
@@ -408,7 +409,7 @@ system <<-SH or abort
   qiime diversity alpha-rarefaction \
     --i-table #{ANALYSIS_DIR}/0_merged_OTU/table.qza \
     --i-phylogeny #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza \
-    --p-max-depth 4000 \
+    --p-max-depth #{READS_THRESHOLD} \
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/alpha-rarefaction.qzv
 

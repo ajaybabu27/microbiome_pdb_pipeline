@@ -44,6 +44,7 @@ Variable             | Required by                                             |
 `RUN_ID`             | all tasks                                               | (none)  | Illumina RUN ID 
 `FASTQ_DIR`          | all QC tasks                                            | (none)  | Folder containing the raw fastq files 
 `QC_DIR`             | all QC tasks                                            |`FASTQ_DIR`| Directory were all the QC output files will be saved
+`READS_THRESHOLD`    | `create_postQC_biome_file` all analysis tasks           | (none)  | Set number of reads for sample filtering threshold and other rarefaction analysis
 `ANALYSIS_DIR`       | all analysis tasks                                      | (none)  |  Directory were all the files generated from various analyses will be stored
 
 
