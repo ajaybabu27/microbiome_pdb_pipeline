@@ -145,7 +145,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   module purge
   module load qiime2/2018.4
-  module load Krona
+  #module load Krona
   module load kraken/2.0.7
   
 
@@ -366,7 +366,7 @@ end
 # ======================
 
 desc "Calculate Alpha Diversity, Beta Diversity and Taxon classification for singe/multiple Runs"
-task :run_Qiime_analysis => [:check, "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv"]
+task :run_Qiime_analysis => ["#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv"]
 file "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv" do |t|
 
 system <<-SH or abort
@@ -415,11 +415,11 @@ system <<-SH or abort
 
   qiime diversity alpha-group-significance \
     --i-alpha-diversity #{ANALYSIS_DIR}/2_core-metrics-results/shannon_vector.qza \
-    --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv/mapping_final.tsv \
+    --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/shannon-group-significance.qzv
 
   #Perform taxon classification
-  mkdir -p #{ANALYSIS_DIR}/3_alpha_diversity/4_taxons
+  mkdir -p #{ANALYSIS_DIR}/4_taxons
   qiime feature-classifier classify-sklearn \
     --i-classifier /sc/orga/projects/InfectiousDisease/reference-db/gg_13_8_otus/gg-13-8-99-515-806-nb-classifier.qza \
     --i-reads #{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza \
