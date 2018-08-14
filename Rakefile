@@ -317,24 +317,34 @@ end
 # ============================
 
 #desc "Create a post QC biome file based on QC analysis"
-task :create_postQC_biome_file => [:check, "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_table.qza"]
-file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_table.qza" do |t|
+task :create_postQC_biome_file => [:check, "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza"]
+file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza" do |t|
   
   system <<-SH or abort
 
     module purge
     module load qiime2/2018.4
-   
+    
+    mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out
+    
     qiime feature-table filter-samples \
     --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
-    --p-min-frequency 4000 \    
+    --p-min-frequency 4000 \
     --m-metadata-file #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv \
     --p-where "SampleType='Stool'" \
-    --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_table.qza
+    --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib.qza
+
+	qiime feature-table filter-features \
+	--i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib.qza \
+	--p-min-frequency 1 \
+	--o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza
+
+	qiime feature-table filter-seqs \
+	--i-data #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/representative_sequences.qza \
+	--i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza \
+	--o-filtered-data #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza
 
   SH
-
-
 
 end
 
@@ -355,19 +365,22 @@ end
 # ======================
 
 desc "Calculate Alpha Diversity, Beta Diversity and Taxon classification for singe/multiple Runs"
-task :run_Qiime_analysis => [:check, "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv"]
-file "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv" do |t|
+task :run_Qiime_analysis => [:check, "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv"]
+file "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv" do |t|
 
 system <<-SH or abort
 
+  module purge
+  module load qiime2/2018.4
+
   #Construct phylogeny for diversity analyses
 
-  
+  mkdir -p #{ANALYSIS_DIR}/1_aligned_OTU
 
   qiime alignment mafft \
     --i-sequences #{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza \
     --o-alignment #{ANALYSIS_DIR}/1_aligned_OTU/aligned-representative_sequences.qza \
-    --p-n-threads -1
+    --p-n-threads 12
 
   qiime alignment mask \
     --i-alignment #{ANALYSIS_DIR}/1_aligned_OTU/aligned-representative_sequences.qza \
@@ -389,7 +402,38 @@ system <<-SH or abort
     --p-sampling-depth 4000 \
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --output-dir #{ANALYSIS_DIR}/2_core-metrics-results \
-    --p-n-jobs -2
+    --p-n-jobs -1
+  
+  mkdir -p #{ANALYSIS_DIR}/3_alpha_diversity
+  qiime diversity alpha-rarefaction \
+    --i-table #{ANALYSIS_DIR}/0_merged_OTU/table.qza \
+    --i-phylogeny #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza \
+    --p-max-depth 4000 \
+    --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
+    --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/alpha-rarefaction.qzv
+
+  qiime diversity alpha-group-significance \
+    --i-alpha-diversity #{ANALYSIS_DIR}/2_core-metrics-results/shannon_vector.qza \
+    --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv/mapping_final.tsv \
+    --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/shannon-group-significance.qzv
+
+  #Perform taxon classification
+  mkdir -p #{ANALYSIS_DIR}/3_alpha_diversity/4_taxons
+  qiime feature-classifier classify-sklearn \
+    --i-classifier /sc/orga/projects/InfectiousDisease/reference-db/gg_13_8_otus/gg-13-8-99-515-806-nb-classifier.qza \
+    --i-reads #{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza \
+    --o-classification #{ANALYSIS_DIR}/4_taxons/taxonomy.qza \
+    --p-n-jobs -1
+
+  qiime metadata tabulate \
+    --m-input-file #{ANALYSIS_DIR}/4_taxons/taxonomy.qza \
+    --o-visualization #{ANALYSIS_DIR}/4_taxons/taxonomy.qzv
+  
+  qiime taxa barplot \
+    --i-table #{ANALYSIS_DIR}/0_merged_OTU/table.qza \
+    --i-taxonomy #{ANALYSIS_DIR}/4_taxons/taxonomy.qza \
+    --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
+    --o-visualization #{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv
 
 
 SH
