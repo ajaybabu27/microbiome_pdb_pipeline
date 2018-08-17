@@ -23,16 +23,15 @@ REPO_DIR = File.dirname(__FILE__)
 RUN_ID = ENV['RUN_ID']
 FASTQ_DIR = ENV['FASTQ_DIR']
 QC_DIR = ENV['QC_DIR']
-ANALYSIS_DIR = ENV['ANALYSIS_DIR']
 READS_THRESHOLD= ENV['READS_THRESHOLD']
+ANALYSIS_DIR = ENV['ANALYSIS_DIR']
+RUN_IDS = ENV['RUN_IDS']
 
 task :env do
      
   sc_orga_scratch = "/sc/orga/scratch/#{ENV['USER']}"
   
   ENV['TMP'] ||= Dir.exists?(sc_orga_scratch) ? sc_orga_scratch : "/tmp"
-  
-  ENV['PERL5LIB'] ||= "/usr/bin/perl5.10.1"
 
 end
 
@@ -79,10 +78,10 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv" do |t|
 
 	
 	forward_lib=$sample"0_Raw"/$sample_id"_"R1.fastq.gz
-    reverse_lib=$sample"0_Raw"/$sample_id"_"R2.fastq.gz
+    	reverse_lib=$sample"0_Raw"/$sample_id"_"R2.fastq.gz
 
-    echo -e $sample_id_mod","$forward_lib",forward" >> $output_directory/all_samples_QC/manifest.csv
-    echo -e $sample_id_mod","$reverse_lib",reverse" >> $output_directory/all_samples_QC/manifest.csv
+	echo -e $sample_id_mod","$forward_lib",forward" >> $output_directory/all_samples_QC/manifest.csv
+	echo -e $sample_id_mod","$reverse_lib",reverse" >> $output_directory/all_samples_QC/manifest.csv
 	
     done     
   
@@ -102,7 +101,8 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
  system <<-SH or abort
     
     module purge
-    module load qiime2/2018.4
+    module load anaconda2
+    source activate qiime2-2018.6
 
     qiime tools import \
     --type 'SampleData[PairedEndSequencesWithQuality]' \
@@ -127,7 +127,9 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
     --p-trunc-len-r 0 \
     --p-n-threads 0  \
     --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2   
-    
+	
+    source deactivate    
+
  SH
 
 end
@@ -144,10 +146,8 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
  system <<-SH or abort
 
   module purge
-  module load qiime2/2018.4
-  #module load Krona
-  module load kraken/2.0.7
-  
+  module load anaconda2
+  source activate qiime2-2018.6  
 
   qiime tools export \
   #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
@@ -159,7 +159,13 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   biom convert -i #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/feature-table.biom -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/feature-table.tsv --to-tsv
 
+  source deactivate
+
   module purge
+  module load Krona
+  module load kraken/2.0.7
+
+  
   module load python py_packages
   python #{REPO_DIR}/scripts/post_qc_reads_export.py #{QC_DIR}/#{RUN_ID}
 
@@ -226,7 +232,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
  system <<-SH or abort
   module purge
   module load bwa
-  module load samtools/1.7
+  module load samtools/1.8
   module load R
   module load bamtools
 
@@ -255,13 +261,13 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc.fasta
 		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/clemente
 		mkdir -p $output_directory
-		{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
+		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
 		
 	elif [[ $sample_id =~ ^Z.* ]]; then
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/zymo_mc.fasta
 		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/zymo
 		mkdir -p $output_directory
-		{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
+		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
 
 	fi
 	
@@ -322,9 +328,10 @@ task :create_postQC_biome_file => [:check, "#{QC_DIR}/#{RUN_ID}/all_samples_QC/f
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza" do |t|
   
   system <<-SH or abort
-
+    
     module purge
-    module load qiime2/2018.4
+    module load anaconda2
+    source activate qiime2-2018.6
     
     mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out
     
@@ -335,15 +342,17 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
     --p-where "SampleType='Stool'" \
     --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib.qza
 
-	qiime feature-table filter-features \
-	--i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib.qza \
-	--p-min-frequency 1 \
-	--o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza
+    qiime feature-table filter-features \
+    --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib.qza \
+    --p-min-frequency 1 \
+    --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza
 
-	qiime feature-table filter-seqs \
-	--i-data #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/representative_sequences.qza \
-	--i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza \
-	--o-filtered-data #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza
+    qiime feature-table filter-seqs \
+    --i-data #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/representative_sequences.qza \
+    --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza \
+    --o-filtered-data #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza
+
+    source deactivate
 
   SH
 
@@ -354,10 +363,24 @@ end
 # ==========================
 
 desc "Prepare analysis run"
-task :prepare_Qiime_analysis => [:check, "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv"]
-file "#{ANALYSIS_DIR}/5_taxons/taxonomy.qzv" do |t|
+task :prepare_Qiime_analysis => [:check, "#{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza"]
+file "#{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza" do |t|
 
-#Merege BIOM tables and metatables.
+run_ids_array= RUN_IDS.split(",")
+
+mkdir_p "#{ANALYSIS_DIR}/0_merged_OTU"
+
+if run_ids_array.length == 1
+  cp "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza", "#{ANALYSIS_DIR}/0_merged_OTU/table.qza"
+  cp "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza", "#{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza"
+  cp "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv", "#{ANALYSIS_DIR}/mapping_final_combined.tsv"
+   
+else
+  puts "more than one found - need to add workflow for merging runs !!!"
+  #Merege BIOM tables and metatables.
+
+end
+
 
 end
 
@@ -367,12 +390,13 @@ end
 
 desc "Calculate Alpha Diversity, Beta Diversity and Taxon classification for singe/multiple Runs"
 task :run_Qiime_analysis => ["#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv"]
-file "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv" do |t|
+file "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv" => "#{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza" do |t|
 
 system <<-SH or abort
 
   module purge
-  module load qiime2/2018.4
+  module load anaconda2
+  source activate qiime2-2018.6
 
   #Construct phylogeny for diversity analyses
 
@@ -436,6 +460,7 @@ system <<-SH or abort
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --o-visualization #{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv
 
+  source deactivate
 
 SH
 

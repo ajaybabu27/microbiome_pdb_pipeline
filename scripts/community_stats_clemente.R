@@ -132,7 +132,7 @@ for (sample_group in c('M1','M6','M13')){
 	p2<-ggcorr(out_data[,c(col_sel)],label_round = 2,label = T,label_color = "black")
 	p<-length(col_sel)
 	
-	pdf(paste("summary_mc_",sample_group,"_corr_plot_dna_conc.pdf",sep='',onefile=FALSE), width=15, height=15)
+	pdf(paste("summary_mc_",sample_group,"_corr_plot_dna_conc.pdf",sep=''), width=15, height=15,onefile=F)
 	print(combo_plot(p,p1,p2))
 	dev.off()
 
