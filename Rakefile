@@ -252,12 +252,12 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
   mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente
 
   for sample in $sample_directory/*/ ; do
-  	sample_id=(`basename $sample`)
+  	
+	sample_id=(`basename $sample`)
 	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.' | awk '{gsub("_1", "");print}' `)
 	query_fasta=$sample"1_"$sample_id_mod".postqc.fasta"
 		
-	if [[ $sample_id =~ ^M.* ]]; then
-	
+	if [[ $sample_id =~ ^M.* ]]; then	
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc.fasta
 		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/clemente
 		mkdir -p $output_directory
@@ -388,7 +388,7 @@ end
 # = run_Qiime_analysis =
 # ======================
 
-desc "Calculate Alpha Diversity, Beta Diversity and Taxon classification for singe/multiple Runs"
+desc "Calculate Alpha Diversity, Beta Diversity and perform Taxon classification for singe/multiple Runs"
 task :run_Qiime_analysis => ["#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv"]
 file "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv" => "#{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza" do |t|
 
