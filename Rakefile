@@ -205,7 +205,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX
 
-  kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --report #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport --paired #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{QC_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
+  kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --report #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport --paired #{FASTQ_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{FASTQ_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
     
   ktImportTaxonomy #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport -t 5 -m 3 -s 0 -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.kronaQC.html
 
@@ -243,7 +243,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
   # Process PhiX reads
   
   output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/PhiX  
-  #{REPO_DIR}/scripts/phiX.sh #{QC_DIR}/#{RUN_ID} $output_directory #{REPO_DIR}
+  #{REPO_DIR}/scripts/phiX.sh #{FASTQ_DIR}/#{RUN_ID} $output_directory #{REPO_DIR}
   
   cp $output_directory/PhiXQC_edit_dist.txt $output_directory/PhiXQC.sorted.seq #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX
 
@@ -289,42 +289,15 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
 
 end
 
-# ==================
-# = create_QC_page =
-# ==================
-
-#desc "Create a landing page for all QC results"
-
-#Add Qiime QC and MC QC charts
-#Filter biom table to only include QC passed samples. Remove MC and Negative and Empty samples. i.e. only include stool samples
-#Link out to Biom File, Metadata file
-
-# =================
-# = upload_QC_pdb =
-# =================
-
-#desc "push QC info to PathogenDB tables"
-
-#task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf"]
-#file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" do |t| 
-
-# system <<-SH or abort
-
-#  module purge
-#  module load R
-
-#  Rscript #{REPO_DIR}/scripts/16S_upload_results.R -w #{QC_DIR}/#{RUN_ID} -r #{RUN_ID} 
-
-# SH
-
-#end
 
 # ============================
 # = create_postQC_biome_file =
 # ============================
 
 #desc "Create a post QC biome file based on QC analysis"
-task :create_postQC_biome_file => [:check, "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza"]
+
+
+task :create_postQC_biome_file => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza"]
 file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza" do |t|
   
   system <<-SH or abort
@@ -334,7 +307,8 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
     source activate qiime2-2018.6
     
     mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out
-    
+
+	#Filter biom table to only include QC passed samples. Remove MC and Negative and Empty samples. i.e. only include stool samples    
     qiime feature-table filter-samples \
     --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
     --p-min-frequency #{READS_THRESHOLD} \
@@ -358,6 +332,38 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
 
 end
 
+
+# ==================
+# = create_QC_page =
+# ==================
+
+#desc "Create a landing page for all QC results"
+
+#Add Qiime QC and MC QC charts
+
+#Link out to Biom File, Metadata file
+
+# =================
+# = upload_QC_pdb =
+# =================
+
+#desc "push QC info to PathogenDB tables"
+
+#task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf"]
+#file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" do |t| 
+
+# system <<-SH or abort
+
+#  module purge
+#  module load R
+
+#  Rscript #{REPO_DIR}/scripts/16S_upload_results.R -w #{QC_DIR}/#{RUN_ID} -r #{RUN_ID} 
+
+# SH
+
+#end
+
+
 # ==========================
 # = prepare_Qiime_analysis =
 # ==========================
@@ -371,9 +377,9 @@ run_ids_array= RUN_IDS.split(",")
 mkdir_p "#{ANALYSIS_DIR}/0_merged_OTU"
 
 if run_ids_array.length == 1
-  cp "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza", "#{ANALYSIS_DIR}/0_merged_OTU/table.qza"
-  cp "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza", "#{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza"
-  cp "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv", "#{ANALYSIS_DIR}/mapping_final_combined.tsv"
+  cp "#{QC_DIR}/#{RUN_IDS}/all_samples_QC/final_biom_out/table_rem_bad_lib_zero_features.qza", "#{ANALYSIS_DIR}/0_merged_OTU/table.qza"
+  cp "#{QC_DIR}/#{RUN_IDS}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza", "#{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza"
+  cp "#{QC_DIR}/#{RUN_IDS}/all_samples_QC/mapping_final.tsv", "#{ANALYSIS_DIR}/mapping_final_combined.tsv"
    
 else
   puts "more than one found - need to add workflow for merging runs !!!"
@@ -427,7 +433,7 @@ system <<-SH or abort
     --p-sampling-depth #{READS_THRESHOLD} \
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --output-dir #{ANALYSIS_DIR}/2_core-metrics-results \
-    --p-n-jobs -1
+    --p-n-jobs 12
   
   mkdir -p #{ANALYSIS_DIR}/3_alpha_diversity
   qiime diversity alpha-rarefaction \
