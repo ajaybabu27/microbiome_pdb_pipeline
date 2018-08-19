@@ -41,13 +41,12 @@ The above location also contains the initial QC file.
 
 ### Resource Requirements
 
-Most of the tasks require a minimum of 12 cores and memory of 50 GB at the minimum.
+Most of the tasks require a minimum of 12 cores and memory of 40 GB at the minimum.
 
 
 ### User Input Requirements
 
-Most of the tasks are automated and interlinked but some tasks are not linked to aid manual user input. The task `create_postQC_biome_file` 
-requires the user to input the minimum number of reads needed for filtering low quality libraries. This threshold should be set based on the QC analysis results. 
+Most of the tasks are automated except for one task `create_postQC_biome_file` which requires the user to input the minimum number of reads needed for filtering low quality libraries. This threshold should be set based on the QC analysis results. 
 
 
 
