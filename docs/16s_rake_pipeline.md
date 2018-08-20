@@ -48,7 +48,7 @@ The above location also contains the initial QC file.
 
 ### Resource Requirements
 
-Most of the tasks require a minimum of 12 cores and memory of 40 GB at the minimum.
+Most of the tasks require a minimum of 12 cores and memory of 35 GB.
 
 
 ### User Input Requirements
