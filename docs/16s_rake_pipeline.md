@@ -53,7 +53,7 @@ Most of the tasks require a minimum of 12 cores and memory of 40 GB at the minim
 
 ### User Input Requirements
 
-Most of the tasks are automated except for one task `create_postQC_biome_file` which requires the user to input the minimum number of reads needed for filtering low quality libraries. This threshold should be set based on the QC analysis results. 
+Most of the tasks are automated except for one task `create_postQC_biome_file` which requires the user to input the minimum number of reads needed for filtering low quality libraries. This threshold should be set based on analysis of QC results. 
 
 ## Tasks
 
