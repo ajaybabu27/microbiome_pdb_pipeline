@@ -1,14 +1,15 @@
-# Must be configured by the end user
+#!/bin/bash
+
+# Enter the directory where the local REPO is stored
 export REPO_DIR=""
 
 # Load required modules
 module load ruby/2.2.0
 
-# Defaults will probably work for these
-export TMP="/sc/orga/scratch/$USER/tmp"
-
-#Fill in the PDB password here
+#Fill in the read/write privilege PDB password here
 export PDBPASS=""
 
-# If running from interactive1/interactive2, need to run requests through internal HTTP proxy
-export HTTP_PROXY="http://proxy.mgmt.hpc.mssm.edu:8123"
+# Setting up environments for Qiime2
+export FONTCONFIG_PATH=/etc/fonts
+export LC_ALL=aa_DJ.utf8
+export LANG=C.UTF-8

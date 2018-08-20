@@ -41,21 +41,22 @@ If a required environment variable isn't present when a task is run and there is
 
 Variable             | Required by                                             | Default | Purpose
 ---------------------|---------------------------------------------------------|---------|-----------------------------------
-`RUN_ID`             | all tasks                                               | (none)  | Illumina RUN ID 
-`FASTQ_DIR`          | all QC tasks                                            | (none)  | Folder containing the raw fastq files 
-`QC_DIR`             | all QC tasks                                            |`FASTQ_DIR`| Directory were all the QC output files will be saved
-`READS_THRESHOLD`    | `create_postQC_biome_file` all analysis tasks           | (none)  | Set number of reads for sample filtering threshold and other rarefaction analysis
-`ANALYSIS_DIR`       | all analysis tasks                                      | (none)  |  Directory were all the files generated from various analyses will be stored
+`RUN_ID`             | all QC tasks                                            | (none)  | Illumina RUN ID 
+`FASTQ_DIR`          | `create_manifest_file`,`run_kraken`,`run_MC_QC`         | (none)  | Directory containing the raw fastq files 
+`QC_DIR`             | all QC tasks                                            | (none)  | Directory were all the QC output files will be saved
+`READS_THRESHOLD`    | `create_postQC_biome_file` & all analysis tasks         | (none)  | Set number of reads for sample filtering threshold and other rarefaction analysis
+`READ_IDS`           | `prepare_Qiime_analysis`								   | (none)  | Illumina RUN IDs for merging runs. Enter as Comma Seperated Values. 
+`ANALYSIS_DIR`       | all analysis tasks                                      | (none)  | Directory were all the files generated from various analyses will be stored
 
 
 ### Running as a `bsub` task
 
 You may also want to run the pipeline as a non-interactive job on the cluster.  The benefit of this approach is that you can reserve specific resources in advance to decrease the likelihood of the job running out of memory or exceeding other system limits.  For this, the `scripts/example.microbiome_pdb_wrapper` should be copied, modified as appropriate, and then can be submitted with `bsub` as in the following example:
 
-    $ bsub -R 'rusage[mem=4000] span[hosts=1]' -m "bode mothra" -P acc_InfectiousDisease -W "24:00" \
+    $ bsub -R 'rusage[mem=4000] span[hosts=1]' -P acc_InfectiousDisease -W "24:00" \
             -L /bin/bash -q premium -n 12 -J H434 \
             -o "%J.stdout" -eo "%J.stderr" \
-        microbiome_pdb_wrapper \
+			microbiome_pdb_wrapper \
             RUN_ID=H434 \
             FASTQ_DIR=/sc/orga/project/InfectiousDisease/microbiome_output/sample/H434 \
             run_mc_qc
