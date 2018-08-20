@@ -6,9 +6,11 @@ Detailed description of tasks explaining workflows from QC to various analysis s
 
 Flowchart describing various rake tasks involved in the key steps of the pipeline.
 
-![16s_rake_pipeline.png](https://github.com/ajaybabu27/microbiome_pdb_pipeline/blob/master/docs/16s_rake_pipeline.jpg)
-For more information on the tools used in the tasks mentioned in the flowchart, look through ![Qiime documentation] (https://docs.qiime2.org/2018.6/)
-An excellent tutorial on a typical ![Qiime 16S workflow] (https://docs.qiime2.org/2018.6/tutorials/moving-pictures/)
+![16s_rake_pipeline.png](https://github.com/ajaybabu27/microbiome_pdb_pipeline/blob/master/docs/16s_rake_pipeline.jpg) 
+
+For more information on the tools used in the tasks mentioned in the flowchart, look through:
+1. [Qiime documentation](https://docs.qiime2.org/2018.6/) 
+2. An excellent tutorial on a typical [Qiime 16S workflow](https://docs.qiime2.org/2018.6/tutorials/moving-pictures/)
 
 
 ## Requirements 
