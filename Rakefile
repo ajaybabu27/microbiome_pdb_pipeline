@@ -101,7 +101,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
  system <<-SH or abort
     
     module purge
-    module load anaconda2
+    module load anaconda3
     source activate qiime2-2018.6
 
     qiime tools import \
@@ -146,7 +146,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
  system <<-SH or abort
 
   module purge
-  module load anaconda2
+  module load anaconda3
   source activate qiime2-2018.6  
 
   qiime tools export \
@@ -303,7 +303,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
   system <<-SH or abort
     
     module purge
-    module load anaconda2
+    module load anaconda3
     source activate qiime2-2018.6
     
     mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out
@@ -401,7 +401,7 @@ file "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv" => "#{ANALYSIS_DIR}/0_merged_
 system <<-SH or abort
 
   module purge
-  module load anaconda2
+  module load anaconda3
   source activate qiime2-2018.6
 
   #Construct phylogeny for diversity analyses
