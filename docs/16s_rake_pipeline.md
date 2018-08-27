@@ -4,9 +4,16 @@ Detailed description of tasks explaining workflows from QC to various analysis s
 
 ## Flow chart of 16S Pipeline 
 
-![16s_rake_pipeline.png](https://github.com/ajaybabu27/microbiome_pdb_pipeline/blob/master/docs/16s_rake_pipeline.jpg)
+Flowchart describing various rake tasks involved in the key steps of the pipeline.
 
-## Requirements
+![16s_rake_pipeline.png](https://github.com/ajaybabu27/microbiome_pdb_pipeline/blob/master/docs/16s_rake_pipeline.jpg) 
+
+For more information on the tools used in the tasks mentioned in the flowchart, look through:
+1. [Qiime documentation](https://docs.qiime2.org/2018.6/) 
+2. An excellent tutorial on a typical [Qiime 16S workflow](https://docs.qiime2.org/2018.6/tutorials/moving-pictures/)
+
+
+## Requirements 
 
 ### Folder structure for directory containing FASTQ raw reads 
 
@@ -41,12 +48,27 @@ The above location also contains the initial QC file.
 
 ### Resource Requirements
 
-Most of the tasks require a minimum of 12 cores and memory of 40 GB at the minimum.
+Most of the tasks require a minimum of 12 cores and memory of 35 GB.
 
 
 ### User Input Requirements
 
-Most of the tasks are automated except for one task `create_postQC_biome_file` which requires the user to input the minimum number of reads needed for filtering low quality libraries. This threshold should be set based on the QC analysis results. 
+Most of the tasks are automated except for one task `create_postQC_biome_file` which requires the user to input the minimum number of reads needed for filtering low quality libraries. This threshold should be set based on analysis of QC results. 
+
+## Tasks
+
+The tasks for 16S pipeline are run in the following order:
+
+QC Tasks: 
+1. `create_manifest_file` 
+2. `run_dada2` 
+3. `run_kraken` 
+4. `run_MC_QC` 
+5. `create_postQC_biome_file` 
+
+Analysis Tasks: 
+1. `prepare_Qiime_analysis` 
+2. `run_Qiime_analysis` 
 
 
 
