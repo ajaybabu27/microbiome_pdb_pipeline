@@ -102,7 +102,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
     
     module purge
     module load anaconda3
-    source activate qiime2-2018.6
+    source activate qiime2-2018.8
 
     qiime tools import \
     --type 'SampleData[PairedEndSequencesWithQuality]' \
@@ -147,7 +147,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   module purge
   module load anaconda3
-  source activate qiime2-2018.6  
+  source activate qiime2-2018.8  
 
   qiime tools export \
   #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
@@ -297,18 +297,18 @@ end
 #desc "Create a post QC biome file based on QC analysis"
 
 
-task :create_postQC_biome_file => ["#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza"]
-file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza" do |t|
+task :create_postQC_biome_file => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza"]
+file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" do |t|
   
   system <<-SH or abort
     
     module purge
     module load anaconda3
-    source activate qiime2-2018.6
+    source activate qiime2-2018.8
     
     mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out
 
-	#Filter biom table to only include QC passed samples. Remove MC and Negative and Empty samples. i.e. only include stool samples    
+    #Filter biom table to only include QC passed samples. Remove MC and Negative and Empty samples. i.e. only include stool samples    
     qiime feature-table filter-samples \
     --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
     --p-min-frequency #{READS_THRESHOLD} \
@@ -402,7 +402,7 @@ system <<-SH or abort
 
   module purge
   module load anaconda3
-  source activate qiime2-2018.6
+  source activate qiime2-2018.8
 
   #Construct phylogeny for diversity analyses
 
