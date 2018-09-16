@@ -108,7 +108,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
     --type 'SampleData[PairedEndSequencesWithQuality]' \
     --input-path #{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv \
     --output-path #{QC_DIR}/#{RUN_ID}/all_samples_QC/paired-end-demux.qza \
-    --source-format PairedEndFastqManifestPhred33
+    --input-format PairedEndFastqManifestPhred33
 
     qiime cutadapt trim-paired \
     --i-demultiplexed-sequences #{QC_DIR}/#{RUN_ID}/all_samples_QC/paired-end-demux.qza \
@@ -121,12 +121,18 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
     --i-data #{QC_DIR}/#{RUN_ID}/all_samples_QC/paired-end-demux-trimmed.qza \
     --o-visualization #{QC_DIR}/#{RUN_ID}/all_samples_QC/paired-end-demux-trimmed.qzv
 
+    
+    if [ -d "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2" ]; then
+      printf '%s\n' "Removing existing DADA directory"
+      rm -rf "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2" 
+    fi
+
     qiime dada2 denoise-paired \
     --i-demultiplexed-seqs #{QC_DIR}/#{RUN_ID}/all_samples_QC/paired-end-demux-trimmed.qza \
     --p-trunc-len-f 0 \
     --p-trunc-len-r 0 \
     --p-n-threads 0  \
-    --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2   
+    --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2
 	
     source deactivate    
 
@@ -150,12 +156,12 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
   source activate qiime2-2018.8  
 
   qiime tools export \
-  #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
-  --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2
+  --input-path #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
+  --output-path #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2
 
   qiime tools export \
-  #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/representative_sequences.qza \
-  --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2
+  --input-path #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/representative_sequences.qza \
+  --output-path #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2
 
   biom convert -i #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/feature-table.biom -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/feature-table.tsv --to-tsv
 
@@ -420,11 +426,16 @@ system <<-SH or abort
   qiime phylogeny fasttree \
     --i-alignment #{ANALYSIS_DIR}/1_aligned_OTU/masked-aligned-representative_sequences.qza \
     --o-tree #{ANALYSIS_DIR}/1_aligned_OTU/unrooted-tree.qza \
-    --p-n-threads -1
+    --p-n-threads 12
 
   qiime phylogeny midpoint-root \
     --i-tree #{ANALYSIS_DIR}/1_aligned_OTU/unrooted-tree.qza \
     --o-rooted-tree #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza
+
+  if [ -d "#{ANALYSIS_DIR}/2_core-metrics-results" ]; then
+     printf '%s\n' "Removing existing core-metrics-diversity directory"
+     rm -rf "#{ANALYSIS_DIR}/2_core-metrics-results" 
+  fi
 
   #Perform diversity analyses
   qiime diversity core-metrics-phylogenetic \
@@ -443,6 +454,14 @@ system <<-SH or abort
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/alpha-rarefaction.qzv
 
+  qiime diversity alpha-rarefaction \
+    --i-table #{ANALYSIS_DIR}/0_merged_OTU/table.qza \
+    --i-phylogeny #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza \
+    --p-max-depth #{READS_THRESHOLD} \
+    --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
+    --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/alpha-rarefaction_1000.qzv \
+    --p-iterations 1000
+
   qiime diversity alpha-group-significance \
     --i-alpha-diversity #{ANALYSIS_DIR}/2_core-metrics-results/shannon_vector.qza \
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
@@ -454,7 +473,7 @@ system <<-SH or abort
     --i-classifier /sc/orga/projects/InfectiousDisease/reference-db/gg_13_8_otus/gg-13-8-99-515-806-nb-classifier.qza \
     --i-reads #{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza \
     --o-classification #{ANALYSIS_DIR}/4_taxons/taxonomy.qza \
-    --p-n-jobs -1
+    --p-n-jobs 12
 
   qiime metadata tabulate \
     --m-input-file #{ANALYSIS_DIR}/4_taxons/taxonomy.qza \
