@@ -79,14 +79,15 @@ shannon_stats_df_raw<-merge(shannon_stats_df_raw,shannon_stats_df_raw_norm[,c('X
 
 shannon_stats_df_raw_norm_melt<-melt(shannon_stats_df_raw_norm)
 
-a<-ggplot()+geom_boxplot(data=shannon_stats_df_raw_norm_melt,aes(x=X, y=value))+geom_point(data=shannon_stats_df_raw,aes(x=X,y=shannon),color='red')+
+png('lme_results/rawVSrarefiedShannonvalues.png',height = 2000,width = 2000,res=200)
+ggplot()+geom_boxplot(data=shannon_stats_df_raw_norm_melt,aes(x=X, y=value))+geom_point(data=shannon_stats_df_raw,aes(x=X,y=shannon),color='red')+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+facet_wrap(~caseERAPID,scales='free_x')
-a
+dev.off()
 
 
 #######################################################
 
-
+#uterate through rarefied shannon values
 df_R2_full<-NULL
 df_R2_reduced<-NULL
 for (x in 1:1000){
@@ -137,9 +138,12 @@ df_R2_full_melt<-melt(df_R2_full[,c(2:4)])
 df_R2_full_melt$value<-round(100*df_R2_full_melt$value,2)
 df_R2_full_raw_melt<-melt(df_R2_full_raw)
 df_R2_full_raw_melt$value<-round(100*df_R2_full_raw_melt$value,2)
+
+#Plot overall R2 values
+png('lme_results/R2overall_stats.png',width = 1000,height = 1500,res = 200)
 ggplot()+geom_boxplot(data=df_R2_full_melt,aes(x=Var2,y=value))+geom_point(data=df_R2_full_raw_melt,aes(x=Var2,y=value),color='red')+
   geom_text(data=df_R2_full_raw_melt,aes(x=Var2,y=value,label=value), hjust=0, vjust=-1)+labs(x='R2 Breakdown',y='%')
-
+dev.off()
 
 df_R2_reduced_melt<-melt(df_R2_reduced[,c(2:4)])
 df_R2_reduced_melt$value<-round(100*df_R2_reduced_melt$value,2)
@@ -151,16 +155,26 @@ df_R2_reduced_raw_melt<-melt(df_R2_reduced_raw[,c(1:3)])
 df_R2_reduced_raw_melt$value<-round(100*df_R2_reduced_raw_melt$value,2)
 df_R2_reduced_raw$pval<-round(df_R2_reduced_raw$pval,2)
 
+#Plot overall reduced R2 distribution
+png('lme_results/reduced_R2_stats.png',width = 1000,height = 1500,res = 200)
 ggplot()+geom_boxplot(data=df_R2_reduced_melt,aes(x=variable,y=value))+ facet_wrap(~ cov_removed, ncol=1)+
   geom_point(data=df_R2_reduced_raw_melt,aes(x=variable,y=value),color='red')+
-  geom_text(data=df_R2_reduced_raw_melt,aes(x=variable,y=value,label=value),hjust=0, vjust=1)
+  geom_text(data=df_R2_reduced_raw_melt,aes(x=variable,y=value,label=value),hjust=0, vjust=1)+labs(y='%')
+dev.off()
 
+#Plot ANOVA p-values
+png('lme_results/reduced_modelVSfull_model_pvals.png',width = 2000,height = 1500,res = 200)
 ggplot()+geom_boxplot(data=df_R2_reduced[,c(2,5)],aes(x=cov_removed,y=pval))+geom_hline(yintercept = 0.05,color='red')+
   geom_point(data=df_R2_reduced_raw[,c(1,4)],aes(x=cov_removed,y=pval),color='red')+
   geom_text(data=df_R2_reduced_raw[,c(1,4)],aes(x=cov_removed,y=pval,label=pval),hjust=0, vjust=2)
+dev.off()
 
+########################################################################
+###The following code Will be moved to seperate script once finalized###
+########################################################################
 
-#Phyloseq Analysis
+#phyloloseq Analysis
+
 setwd('/home/ajay/Desktop/minerva/sc/orga/scratch/kumara22/test_microbiome_analysis')
 
 SVs<-read_qza("0_merged_OTU/table.qza")
@@ -201,7 +215,7 @@ metadata = import_qiime_sample_data('/home/ajay/Desktop/minerva/sc/orga/projects
 phylo_object = merge_phyloseq(biomot, metadata)
 phylo_object@sam_data$eRAP_ID<-as.factor(as.character(phylo_object@sam_data$eRAP_ID))
 
-#Plot Different species richness metrics
+#Plot Different species richness metrics (various alpha diversity metrics)
 p<-plot_richness(phylo_object, x = "combo",color = "combo", measures="Shannon")
 p+geom_boxplot(data = p$data, aes(x = combo, y = value,color = combo), alpha = 0.1)
 
