@@ -87,6 +87,20 @@ dev.off()
 
 #######################################################
 
+
+mapping_file_shannon_filt<-mapping_file_shannon[mapping_file_shannon$bacteria_reads<100000,]
+mapping_file_shannon_filt$bins<-NA
+ggplot(data = mapping_file_shannon_filt,aes(x=bacteria_reads))+geom_histogram(colour='red')
+mapping_file_shannon_filt[mapping_file_shannon_filt$bacteria_reads<100000,'bins']<-'high'
+mapping_file_shannon_filt[mapping_file_shannon_filt$bacteria_reads<40000,'bins']<-'low'
+ggplot()+geom_boxplot(data=mapping_file_shannon_filt,aes(x=bins,y=shannon))
+ggplot(data=mapping_file_shannon_filt,aes(x=bacteria_reads,y=shannon))+geom_point(aes(colour=bins))
+cor(mapping_file_shannon_filt$bacteria_reads,mapping_file_shannon_filt$shannon)
+table(mapping_file_shannon_filt$bins)
+mapping_file_shannon_filt$bins<-as.factor(mapping_file_shannon_filt$bins)
+wilcox.test(shannon ~ bins, data = mapping_file_shannon_filt) 
+
+
 #uterate through rarefied shannon values
 df_R2_full<-NULL
 df_R2_reduced<-NULL
@@ -175,7 +189,7 @@ dev.off()
 
 #phyloloseq Analysis
 
-setwd('/home/ajay/Desktop/minerva/sc/orga/scratch/kumara22/test_microbiome_analysis')
+setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00007')
 
 SVs<-read_qza("0_merged_OTU/table.qza")
 otu_table<-as.data.frame(SVs$data)
@@ -183,15 +197,18 @@ otu_table<-as.data.frame(SVs$data)
 
 sparsity=sum(otu_table == 0)/(dim(otu_table)[1]*dim(otu_table)[2])
 feature_count<-as.data.frame(sort(rowSums(otu_table)))
+feature_count2<-feature_count[feature_count$`sort(rowSums(otu_table))`<10,]
+hist(feature_count2)
+p<-ggplot(data=feature_count,aes(x=feature_count$`sort(rowSums(otu_table))`))+geom_histogram(bins = 200)
+ggplotly(p)
 sample_count<-as.data.frame(sort(colSums(otu_table)))
+ggplot(sample_count,aes(x=sample_count$`sort(colSums(otu_table))`))+geom_histogram(bins = 100)
 quantile(sample_count$`sort(colSums(otu_table))`)
 mean(sample_count$`sort(colSums(otu_table))`)
 
 file_ls <- as.character(unzip("/home/ajay/Desktop/minerva/sc/orga/scratch/kumara22/test_microbiome_analysis/0_merged_OTU/table.qza", list = TRUE)$Name)
 biom_file=unz(filename = paste(file_ls[1],'/data/feature-table.biom',sep=''),description = "table.qza")
 
-
-setwd('/home/ajay/Desktop/minerva/sc/orga/scratch/kumara22/test_microbiome_analysis')
 
 library("phyloseq")
 
@@ -225,6 +242,7 @@ tax_glom(phylo_object,taxrank = "Rank7")
 
 phylo_object_filt<-filter_taxa(phylo_object, function(x) sum(x > 3) > (0.2*length(x)), TRUE)
 
+
 total = median(sample_sums(phylo_object_filt))
 standf = function(x, t=total) round(t * (x / sum(x)))
 phylo_object_normalized = transform_sample_counts(phylo_object_filt, standf)
@@ -238,21 +256,27 @@ phylo_object_CV_filtered = filter_taxa(phylo_object_normalized, function(x) sd(x
 otu_table<-phylo_object_CV_filtered@otu_table
 sparsity=sum(otu_table == 0)/(dim(otu_table)[1]*dim(otu_table)[2])
 
-phylo_object.ord <- ordinate(phylo_object, "PCoA", "bray", weighted=TRUE)
-p2 = plot_ordination(phylo_object, phylo_object.ord, type="samples", color="eRAP_ID", shape="combo") 
-p3<-p2 + geom_polygon(aes(fill=eRAP_ID)) + geom_point(size=5) + ggtitle("samples")
-p3
+phylo_object.ord <- ordinate(phylo_object, "NMDS", "bray", weighted=TRUE)
+p2 = plot_ordination(phylo_object, phylo_object.ord, type="samples", color="eRAP_ID", shape="combo")+
+  stat_ellipse()
+p2
 
-phylo_object_normalized.ord <- ordinate(phylo_object_normalized, "PCoA", "bray", weighted=TRUE)
-p2 = plot_ordination(phylo_object_normalized, phylo_object_normalized.ord, type="samples", color="eRAP_ID", shape="combo") 
-p3<-p2 + geom_polygon(aes(fill=eRAP_ID)) + geom_point(size=5) + ggtitle("samples")
-p3
+phylo_object_normalized.ord <- ordinate(phylo_object_normalized, "NMDS", "bray", weighted=TRUE)
+p2 = plot_ordination(phylo_object_normalized, phylo_object_normalized.ord, type="samples", color="eRAP_ID", shape="combo")+
+  stat_ellipse()
+p2
 
-p2 = plot_ordination(phylo_object_normalized, phylo_object_normalized.ord, type="samples", color="combo", shape="ABX_admin_24hrprior_sample_collection_bool") 
-p3<-p2 + geom_polygon(aes(fill=combo)) + geom_point(size=5) + ggtitle("samples")
-p3
+p2 = plot_ordination(phylo_object, phylo_object.ord, type="samples", color="combo", shape="ABX_admin_24hrprior_sample_collection_bool")+
+  stat_ellipse()+ scale_color_manual(values=c("blue", "red", "orange",'dark green'))
+#p3<-p2 + geom_polygon(aes(fill=combo)) + geom_point(size=5) + ggtitle("samples")
+png('nmds_clusters.png',height = 2000,width = 3000,res=300)
+print(p2)
+dev.off()
 
-ggplotly(p3)
+p4 = plot_ordination(phylo_object_normalized, phylo_object_normalized.ord, type="split", color="combo", shape="ABX_admin_24hrprior_sample_collection_bool", label="combo", title="split") 
+p4
+
+ggplotly(p2)
 
 plotly.offline.plot(p3, filename='name.html')
 
