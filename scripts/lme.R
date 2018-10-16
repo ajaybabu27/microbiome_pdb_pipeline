@@ -7,15 +7,13 @@ library(htmlwidgets)
 library(qiime2R)
 library(tidyverse)
 library(reshape2)
+library('GoodmanKruskal')
 
 setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00007')
 
 set.seed(100)
 
 mapping_file<-read.table(file='mapping_final_combined.tsv',sep='\t',header = T,comment.char = '')
-
-df_R2_full_raw<-NULL
-df_R2_reduced_raw<-NULL
 
 #Shannon metrics (raw)
 file_ls <- as.character(unzip("2_core-metrics-results/shannon_vector.qza", list = TRUE)$Name)
@@ -25,9 +23,105 @@ shannon_stats_df_raw=read.table(shannon_stats,sep='\t',header = T)
 mapping_file_shannon<-merge(mapping_file,shannon_stats_df_raw,by=1)
 mapping_file_shannon[is.na(mapping_file_shannon$eRAP_ID),'eRAP_ID']<-0
 #mapping_file_shannon<-mapping_file_shannon[!is.na(mapping_file_shannon$caseERAPID),]
+mapping_file_shannon$eRAP_ID<-as.factor(mapping_file_shannon$eRAP_ID)
 
-cdi_biom.model<-lmer(shannon ~ bacteria_reads + CDItestResult + CaseControlAnnot + ABX_admin_24hrprior_sample_collection_bool + (1|eRAP_ID), data=mapping_file_shannon, REML=F)
-summary(cdi_biom.model)
+#Load PCR QC
+PCR_qc<-read.table('pcr_qc.csv',sep=',',header = T)
+mapping_file_shannon<-merge(mapping_file_shannon,PCR_qc,by=1)
+
+
+#Assess Multicollinearity
+
+library(GGally)
+
+mapping_file_shannon$hc_bool<-F
+mapping_file_shannon[grepl('HC',mapping_file_shannon$X.SampleID),'hc_bool']<-T
+
+mapping_file_shannon_sub<-mapping_file_shannon[mapping_file_shannon$bacteria_reads<100000,]
+
+ggpairs(mapping_file_shannon_sub[,c('bacteria_reads','input','PCR2','shannon')],lower = list(mapping = aes(color = mapping_file_shannon_sub$hc_bool)))
+
+independent=c('bacteria_reads','input','CDItestResult','CaseControlAnnot','ABX_admin_24hrprior_sample_collection_bool',
+              'ABX_admin_1wprior_sample_collection_bool', 
+              'vanco_oral_admin_1wprior_sample_collection_bool',
+              'vanco_int_admin_1wprior_sample_collection_bool',
+              'met_oral_admin_1wprior_sample_collection_bool',
+              'met_int_admin_1wprior_sample_collection_bool',
+              'Systematic_Plate_ID')
+
+
+library(usdm)
+predictor_df<-mapping_file_shannon[,independent]
+vif_raw=as.data.frame(vif(predictor_df))
+vif_raw$VIF<-round(vif_raw$VIF,2)
+write.table(file='vif_raw.tsv',vif_raw,sep='\t',row.names = F)
+
+independent=c('CDItestResult','CaseControlAnnot','ABX_admin_24hrprior_sample_collection_bool',
+              'ABX_admin_1wprior_sample_collection_bool', 
+              'vanco_oral_admin_1wprior_sample_collection_bool',
+              'vanco_int_admin_1wprior_sample_collection_bool',
+              'met_oral_admin_1wprior_sample_collection_bool',
+              'met_int_admin_1wprior_sample_collection_bool',
+              'Systematic_Plate_ID')
+
+predictor_df<-mapping_file_shannon[,independent]
+GKmatrix1 <- GKtauDataframe(predictor_df)
+plot(GKmatrix1)
+
+independent=c('ABX_admin_24hrprior_sample_collection_bool',
+              'ABX_admin_1wprior_sample_collection_bool', 
+              'vanco_oral_admin_1wprior_sample_collection_bool',
+              'vanco_int_admin_1wprior_sample_collection_bool',
+              'met_oral_admin_1wprior_sample_collection_bool',
+              'met_int_admin_1wprior_sample_collection_bool',
+              'Systematic_Plate_ID')
+
+predictor_df<-mapping_file_shannon[,independent]
+GKmatrix1 <- GKtauDataframe(predictor_df)
+png('categorical_removed',height = 5000,width = 7000,res=600)
+plot(GKmatrix1)
+dev.off()
+
+
+independent=c('bacteria_reads','input','ABX_admin_24hrprior_sample_collection_bool',
+              'ABX_admin_1wprior_sample_collection_bool', 
+              'vanco_oral_admin_1wprior_sample_collection_bool',
+              'vanco_int_admin_1wprior_sample_collection_bool',
+              'met_oral_admin_1wprior_sample_collection_bool',
+              'met_int_admin_1wprior_sample_collection_bool',
+              'Systematic_Plate_ID')
+
+predictor_df<-mapping_file_shannon[,independent]
+vif_filt=as.data.frame(vif(predictor_df))
+vif_filt$VIF<-round(vif_filt$VIF,2)
+write.table(file='vif_filt.tsv',vif_filt,sep='\t',row.names = F)
+#mapping_file_shannon$bacteria_reads_cor<-mapping_file_shannon$bacteria_reads*1.5
+
+cdi_biom.model<-lmer(shannon ~ bacteria_reads+CDItestResult + CaseControlAnnot + 
+                       ABX_admin_1wprior_sample_collection_bool + input+PCR2+
+                       vanco_oral_admin_1wprior_sample_collection_bool+
+                       vanco_int_admin_1wprior_sample_collection_bool+
+                       met_oral_admin_1wprior_sample_collection_bool+
+                       met_int_admin_1wprior_sample_collection_bool+
+                       (1|Systematic_Plate_ID)+
+                       (1|eRAP_ID), data=mapping_file_shannon, REML=F)
+
+
+df_R2_full_raw<-NULL
+df_R2_reduced_raw<-NULL
+cdi_biom.model<-lmer(shannon ~ bacteria_reads+
+                       ABX_admin_24hrprior_sample_collection_bool +
+                       ABX_admin_1wprior_sample_collection_bool +
+                       vanco_oral_admin_1wprior_sample_collection_bool+
+                       met_oral_admin_1wprior_sample_collection_bool+
+                       vanco_int_admin_1wprior_sample_collection_bool+
+                       met_int_admin_1wprior_sample_collection_bool+
+                       (1|Systematic_Plate_ID)+
+                       (1|eRAP_ID), data=mapping_file_shannon, REML=F)
+
+
+
+
 full_R2f<-r.squaredGLMM(cdi_biom.model)[1]
 full_R2m<-r.squaredGLMM(cdi_biom.model)[2]-r.squaredGLMM(cdi_biom.model)[1]
 full_R2<-r.squaredGLMM(cdi_biom.model)[2]
@@ -36,13 +130,31 @@ df_R2_full_raw<-rbind(df_R2_full_raw,c(full_R2,full_R2f,full_R2m))
 colnames(df_R2_full_raw)<-c('R2','R2-fixed','R2-mixed')
 
 dependent="shannon ~ "
-independent=c('bacteria_reads','CDItestResult','CaseControlAnnot','ABX_admin_24hrprior_sample_collection_bool')
+independent=c('bacteria_reads',
+              'ABX_admin_24hrprior_sample_collection_bool',
+              'ABX_admin_1wprior_sample_collection_bool',
+              'vanco_oral_admin_1wprior_sample_collection_bool',
+              'met_oral_admin_1wprior_sample_collection_bool',
+              'vanco_int_admin_1wprior_sample_collection_bool',
+                'met_int_admin_1wprior_sample_collection_bool',
+              'eRAP_ID','Systematic_Plate_ID')
 
 for (y in independent){
-  formula_right=paste(independent[! independent %in% y],collapse = '+')  
-  formula_right=paste(formula_right,'(1|eRAP_ID)',sep='+')
+  print(y)
+  print(table(mapping_file_shannon[,y]))
+  formula_right=paste(independent[! independent %in% c(y,'Systematic_Plate_ID',
+                                                       'eRAP_ID')],collapse = '+')  
+  if(y=='Systematic_Plate_ID'){
+    formula_right=paste(formula_right,'(1|eRAP_ID)',sep='+')
+  }
+  else if(y=='eRAP_ID'){
+    formula_right=paste(formula_right,'(1|Systematic_Plate_ID)',sep='+')
+  }
+  else{
+    formula_right=paste(formula_right,'(1|Systematic_Plate_ID)','(1|eRAP_ID)',sep='+')
+  }
   formula=as.formula(paste(dependent,formula_right,sep=''))
-  
+  #print(formula)
   cdi_biom.model.reduced<-lmer(formula, data=mapping_file_shannon, REML=F)
   
   reduced_R2<-r.squaredGLMM(cdi_biom.model.reduced)[2]
@@ -54,6 +166,41 @@ for (y in independent){
 }
 
 colnames(df_R2_reduced_raw)<-c('cov_removed','reduced_R2','contribution','pval')
+
+df_R2_reduced_raw<-as.data.frame(df_R2_reduced_raw)
+df_R2_reduced_raw$reduced_R2<-as.numeric(as.character(df_R2_reduced_raw$reduced_R2))
+df_R2_reduced_raw$contribution<-as.numeric(as.character(df_R2_reduced_raw$contribution))
+df_R2_reduced_raw$pval<-as.numeric(as.character(df_R2_reduced_raw$pval))
+df_R2_reduced_raw$pval<-round(df_R2_reduced_raw$pval,2)
+df_R2_reduced_raw[,c(2:3)]<-round(100*df_R2_reduced_raw[,c(2:3)],2)
+
+write.table(file='loo.tsv',df_R2_reduced_raw,row.names = F,sep='\t')
+
+vif.mer <- function (fit) {
+  ## adapted from rms::vif
+  
+  v <- vcov(fit)
+  nam <- names(fixef(fit))
+  
+  ## exclude intercepts
+  ns <- sum(1 * (nam == "Intercept" | nam == "(Intercept)"))
+  if (ns > 0) {
+    v <- v[-(1:ns), -(1:ns), drop = FALSE]
+    nam <- nam[-(1:ns)]
+  }
+  
+  d <- diag(v)^0.5
+  v <- diag(solve(v/(d %o% d)))
+  names(v) <- nam
+  v
+}
+
+vif.mer(cdi_biom.model)
+
+
+summary(cdi_biom.model)
+library(car)
+vif(cdi_biom.model)
 
 #hist(mapping_file_shannon$shannon)
 #qqnorm(mapping_file_shannon$shannon)
@@ -101,7 +248,7 @@ mapping_file_shannon_filt$bins<-as.factor(mapping_file_shannon_filt$bins)
 wilcox.test(shannon ~ bins, data = mapping_file_shannon_filt) 
 
 
-#uterate through rarefied shannon values
+#iterate through rarefied shannon values
 df_R2_full<-NULL
 df_R2_reduced<-NULL
 for (x in 1:1000){
@@ -184,10 +331,105 @@ ggplot()+geom_boxplot(data=df_R2_reduced[,c(2,5)],aes(x=cov_removed,y=pval))+geo
 dev.off()
 
 ########################################################################
+###              OTU based mixed effect lm                           ###
+########################################################################
+
+tax_df_filt<-as.data.frame(phylo_object_normalized@otu_table)
+tax_df_filt<-merge(tax_df_filt,phylo_object_normalized@tax_table[,c('Rank2')],by=0)
+rownames(tax_df_filt)<-tax_df_filt$Rank2
+tax_df_filt[,c('Row.names','Rank2')]<-NULL
+tax_df_filt_t<-t(tax_df_filt)
+
+mapping_file_shannon_otus<-merge(mapping_file_shannon,tax_df_filt_t,by.x=1,by.y=0)
+
+df_R2_full_otu_normalized<-NULL
+df_R2_reduced_otu_normalized<-NULL
+
+for (dependent_var in rownames(tax_df_filt)){
+  
+  dependent=paste(dependent_var," ~ ",sep='')
+  independent=c('bacteria_reads',
+                'ABX_admin_24hrprior_sample_collection_bool',
+                'ABX_admin_1wprior_sample_collection_bool',
+                'vanco_oral_admin_1wprior_sample_collection_bool',
+                'met_oral_admin_1wprior_sample_collection_bool',
+                'vanco_int_admin_1wprior_sample_collection_bool',
+                'met_int_admin_1wprior_sample_collection_bool',
+                'eRAP_ID','Systematic_Plate_ID')
+  formula_right=paste(independent[! independent %in% c('Systematic_Plate_ID',
+                                                       'eRAP_ID')],collapse = '+')
+  
+  formula_right=paste(formula_right,'(1|Systematic_Plate_ID)','(1|eRAP_ID)',sep='+')
+  formula=as.formula(paste(dependent,formula_right,sep=''))
+  
+  #print(formula)
+  cdi_biom.model<-lmer(formula, data=mapping_file_shannon_otus, REML=F)
+  
+  
+  
+  
+  full_R2f<-r.squaredGLMM(cdi_biom.model)[1]
+  full_R2m<-r.squaredGLMM(cdi_biom.model)[2]-r.squaredGLMM(cdi_biom.model)[1]
+  full_R2<-r.squaredGLMM(cdi_biom.model)[2]
+  
+  df_R2_full_otu_normalized<-rbind(df_R2_full_otu_normalized,c(dependent_var,full_R2,full_R2f,full_R2m))
+ 
+  for (y in independent){
+    print(y)
+    print(table(mapping_file_shannon_otus[,y]))
+    formula_right=paste(independent[! independent %in% c(y,'Systematic_Plate_ID',
+                                                         'eRAP_ID')],collapse = '+')  
+    if(y=='Systematic_Plate_ID'){
+      formula_right=paste(formula_right,'(1|eRAP_ID)',sep='+')
+    }
+    else if(y=='eRAP_ID'){
+      formula_right=paste(formula_right,'(1|Systematic_Plate_ID)',sep='+')
+    }
+    else{
+      formula_right=paste(formula_right,'(1|Systematic_Plate_ID)','(1|eRAP_ID)',sep='+')
+    }
+    formula=as.formula(paste(dependent,formula_right,sep=''))
+    #print(formula)
+    cdi_biom.model.reduced<-lmer(formula, data=mapping_file_shannon_otus, REML=F)
+    
+    reduced_R2<-r.squaredGLMM(cdi_biom.model.reduced)[2]
+    cont=full_R2-reduced_R2
+    pval<-anova(cdi_biom.model.reduced,cdi_biom.model)$`Pr(>Chisq)`[2]
+    
+    df_R2_reduced_otu_normalized<-rbind(df_R2_reduced_otu_normalized,c(dependent_var,y,reduced_R2,cont,pval))
+    
+  }
+  
+  
+  
+  
+}
+colnames(df_R2_full_otu_normalized)<-c('Dependent_Var','R2','R2-fixed','R2-mixed')
+
+df_R2_full_otu_normalized<-as.data.frame(df_R2_full_otu_normalized)
+df_R2_full_otu_normalized[,c(2:4)]<-apply(df_R2_full_otu_normalized[,c(2:4)],2,as.character)
+df_R2_full_otu_normalized[,c(2:4)]<-apply(df_R2_full_otu_normalized[,c(2:4)],2,as.numeric)
+df_R2_full_otu_normalized[,c(2:4)]<-round(100*df_R2_full_otu_normalized[,c(2:4)],2)
+
+df_R2_reduced_otu_normalized<-as.data.frame(df_R2_reduced_otu_normalized)
+df_R2_reduced_otu_normalized[,c(3:4)]<-apply(df_R2_reduced_otu_normalized[,c(3:4)],2,as.character)
+df_R2_reduced_otu_normalized[,c(3:4)]<-apply(df_R2_reduced_otu_normalized[,c(3:4)],2,as.numeric)
+df_R2_reduced_otu_normalized[,c(3:4)]<-round(100*df_R2_reduced_otu_normalized[,c(3:4)],2)
+  
+colnames(df_R2_reduced_otu_normalized)<-c('Dependent_Var','covariate','R2-reduced%','Cont_per','pval')
+
+png('R2_OTU_dist_norm.png',width=4000,height=2000,res=300)
+ggplot()+geom_jitter(data=df_R2_reduced_otu_normalized,aes(covariate,Cont_per,color=df_R2_reduced_otu_normalized$Dependent_Var), position = position_jitter(width = 0.05))+
+  geom_jitter(data=df_R2_reduced_raw,aes(cov_removed,contribution), position = position_jitter(width = 0.05),shape=10,size=5)+
+        theme(axis.text.x = element_text(angle = 90, hjust = 1))+ scale_color_brewer(palette="Paired")#+
+  #coord_cartesian(ylim = c(0, 25)) 
+dev.off()
+
+########################################################################
 ###The following code Will be moved to seperate script once finalized###
 ########################################################################
 
-#phyloloseq Analysis
+
 
 setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00007')
 
@@ -206,9 +448,10 @@ ggplot(sample_count,aes(x=sample_count$`sort(colSums(otu_table))`))+geom_histogr
 quantile(sample_count$`sort(colSums(otu_table))`)
 mean(sample_count$`sort(colSums(otu_table))`)
 
-file_ls <- as.character(unzip("/home/ajay/Desktop/minerva/sc/orga/scratch/kumara22/test_microbiome_analysis/0_merged_OTU/table.qza", list = TRUE)$Name)
-biom_file=unz(filename = paste(file_ls[1],'/data/feature-table.biom',sep=''),description = "table.qza")
+#file_ls <- as.character(unzip("/home/ajay/Desktop/minerva/sc/orga/scratch/kumara22/test_microbiome_analysis/0_merged_OTU/table.qza", list = TRUE)$Name)
+#biom_file=unz(filename = paste(file_ls[1],'/data/feature-table.biom',sep=''),description = "table.qza")
 
+#phyloloseq Analysis
 
 library("phyloseq")
 
@@ -231,17 +474,49 @@ biomot = import_biom('0_merged_OTU/merged_taxon_biome.biom')
 metadata = import_qiime_sample_data('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00007/mapping_final_combined.tsv')
 phylo_object = merge_phyloseq(biomot, metadata)
 phylo_object@sam_data$eRAP_ID<-as.factor(as.character(phylo_object@sam_data$eRAP_ID))
+phylo_object@sam_data[is.na(phylo_object@sam_data$cdi_order),'cdi_order']<-0
+phylo_object@sam_data$cdi_order<-as.factor(as.character(phylo_object@sam_data$cdi_order))
+
+phylo_object@sam_data$combo_cdi_order<-interaction(phylo_object@sam_data$combo,phylo_object@sam_data$cdi_order)
+
+phylo_object@sam_data$combo_cdi_order<-factor(as.character(phylo_object@sam_data$combo_cdi_order),levels=c('CD Pos Case samples.1',
+                                                                                                           'CD Pos Case samples.2',
+                                                                                                           'CD Pos Case samples.3',
+                                                                                                           'CD Pos Case samples.4',
+                                                                                                           'CD Pos Case samples.5',
+                                                                                                           'CD Pos Case samples.0',
+                                                                                                           'CD Neg Case samples.0',
+                                                                                                           'Matched Control Samples.0',
+                                                                                                           'Healthy control Samples.0'))
+
 
 #Plot Different species richness metrics (various alpha diversity metrics)
-p<-plot_richness(phylo_object, x = "combo",color = "combo", measures="Shannon")
-p+geom_boxplot(data = p$data, aes(x = combo, y = value,color = combo), alpha = 0.1)
 
-tax_df<-as.data.frame(phylo_object@tax_table)
-tax_glom(phylo_object,taxrank = "Rank7")
+give.n <- function(x){
+  return(c(y = -0.2, label = length(x)))
+}
+
+png('alpha_diversity_cdi_order.png',width = 2500,height = 3000,res=300)
+p<-plot_richness(phylo_object, x = "combo_cdi_order",color = "combo_cdi_order", measures="Shannon")
+p+geom_boxplot(data = p$data, aes(x = combo_cdi_order, y = value,color = combo_cdi_order), alpha = 0.1)+ 
+  stat_summary(fun.data = give.n, geom = "text")
+dev.off()
 
 
-phylo_object_filt<-filter_taxa(phylo_object, function(x) sum(x > 3) > (0.2*length(x)), TRUE)
 
+rank_names(phylo_object)
+
+phylo_object_phylum<-tax_glom(phylo_object,taxrank = "Rank2")
+tax_df<-as.data.frame(phylo_object@otu_table)
+
+otu_table<-phylo_object_phylum@otu_table
+sparsity=sum(otu_table == 0)/(dim(otu_table)[1]*dim(otu_table)[2])
+
+
+phylo_object_filt<-filter_taxa(phylo_object_phylum, function(x) sum(x > 3) > (0.05*length(x)), TRUE)
+tax_df_filt<-as.data.frame(phylo_object_filt@otu_table)
+tax_df_filt_missing<-tax_df[!rownames(tax_df)%in%rownames(tax_df_filt),]
+max(apply(tax_df_filt_missing,1,max))
 
 total = median(sample_sums(phylo_object_filt))
 standf = function(x, t=total) round(t * (x / sum(x)))
@@ -266,8 +541,39 @@ p2 = plot_ordination(phylo_object_normalized, phylo_object_normalized.ord, type=
   stat_ellipse()
 p2
 
-p2 = plot_ordination(phylo_object, phylo_object.ord, type="samples", color="combo", shape="ABX_admin_24hrprior_sample_collection_bool")+
+independent=c('bacteria_reads','input','PCR2','CDItestResult','CaseControlAnnot','ABX_admin_24hrprior_sample_collection_bool',
+              'ABX_admin_1wprior_sample_collection_bool', 
+              'vanco_oral_admin_1wprior_sample_collection_bool',
+              'vanco_int_admin_1wprior_sample_collection_bool',
+              'met_oral_admin_1wprior_sample_collection_bool',
+              'met_int_admin_1wprior_sample_collection_bool',
+              'eRAP_ID','Systematic_Plate_ID')
+
+for(ind in independent){
+print(ind)  
+  if(ind=='eRAP_ID'){
+    plot_ordination(phylo_object_normalized , phylo_object_normalized.ord, type="samples", color=ind,title="Normalized")+
+      stat_ellipse()
+    ggsave(paste(ind,'_Normalized.pdf',sep=''))
+  }
+  else if(is.factor(mapping_file_shannon[,ind]) | is.logical(mapping_file_shannon[,ind])){
+  #pdf(paste(y,'.pdf',sep=''),width=10,height=8)
+plot_ordination(phylo_object_normalized , phylo_object_normalized.ord, type="samples", color=ind,title="Normalized")+
   stat_ellipse()+ scale_color_manual(values=c("blue", "red", "orange",'dark green'))
+    ggsave(paste(ind,'_Normalized.pdf',sep=''))
+  }  else{
+    plot_ordination(phylo_object_normalized , phylo_object_normalized.ord, type="samples", color=ind,title="Normalized")
+    ggsave(paste(ind,'_Normalized.pdf',sep=''))
+      
+  }
+
+#dev.off()
+}
+
+plot_ordination(phylo_object, phylo_object.ord, type="samples", color="cdi_order")+
+  stat_ellipse()#+ scale_color_manual(values=c("blue", "red", "orange",'dark green'))
+
+
 #p3<-p2 + geom_polygon(aes(fill=combo)) + geom_point(size=5) + ggtitle("samples")
 png('nmds_clusters.png',height = 2000,width = 3000,res=300)
 print(p2)
