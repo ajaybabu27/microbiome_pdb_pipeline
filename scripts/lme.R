@@ -335,9 +335,23 @@ dev.off()
 ########################################################################
 
 tax_df_filt<-as.data.frame(phylo_object_normalized@otu_table)
+
+tax_table
+
 tax_df_filt<-merge(tax_df_filt,phylo_object_normalized@tax_table[,c('Rank2')],by=0)
 rownames(tax_df_filt)<-tax_df_filt$Rank2
 tax_df_filt[,c('Row.names','Rank2')]<-NULL
+
+taxa_joined<-as.data.frame(apply(phylo_object_normalized@tax_table, 1, paste, collapse="_"))
+colnames(taxa_joined)[1]<-'full_taxa'
+tax_df_filt<-merge(tax_df_filt,taxa_joined,by=0)
+tax_df_filt$Row.names<-NULL
+tax_df_filt<-aggregate(. ~ full_taxa, tax_df_filt, sum)
+rownames(tax_df_filt)<-tax_df_filt$full_taxa
+tax_df_filt$full_taxa<-NULL
+rownames(tax_df_filt)<-gsub("\\[", "", rownames(tax_df_filt))
+rownames(tax_df_filt)<-gsub("\\]", "", rownames(tax_df_filt))
+
 tax_df_filt_t<-t(tax_df_filt)
 
 mapping_file_shannon_otus<-merge(mapping_file_shannon,tax_df_filt_t,by.x=1,by.y=0)
@@ -424,6 +438,14 @@ ggplot()+geom_jitter(data=df_R2_reduced_otu_normalized,aes(covariate,Cont_per,co
         theme(axis.text.x = element_text(angle = 90, hjust = 1))+ scale_color_brewer(palette="Paired")#+
   #coord_cartesian(ylim = c(0, 25)) 
 dev.off()
+df_R2_reduced_otu_normalized$firmicute_bool<-df_R2_reduced_otu_normalized$Dependent_Var%in%c("Firmicutes")
+a<-ggplot()+geom_jitter(data=df_R2_reduced_otu_normalized,aes(covariate,Cont_per,color=df_R2_reduced_otu_normalized$Dependent_Var,shape=df_R2_reduced_otu_normalized$firmicute_bool), position = position_jitter(width = 0.05))+
+  geom_jitter(data=df_R2_reduced_raw,aes(cov_removed,contribution), position = position_jitter(width = 0.05),shape=10,size=5)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+ theme(legend.position="none")
+#coord_cartesian(ylim = c(0, 25)) 
+library(plotly)
+b<-ggplotly(a)
+htmlwidgets::saveWidget(b, "all_otus_variance_partition_normalized.html")
 
 ########################################################################
 ###The following code Will be moved to seperate script once finalized###
@@ -513,7 +535,7 @@ otu_table<-phylo_object_phylum@otu_table
 sparsity=sum(otu_table == 0)/(dim(otu_table)[1]*dim(otu_table)[2])
 
 
-phylo_object_filt<-filter_taxa(phylo_object_phylum, function(x) sum(x > 3) > (0.05*length(x)), TRUE)
+phylo_object_filt<-filter_taxa(phylo_object, function(x) sum(x > 3) > (0.05*length(x)), TRUE)
 tax_df_filt<-as.data.frame(phylo_object_filt@otu_table)
 tax_df_filt_missing<-tax_df[!rownames(tax_df)%in%rownames(tax_df_filt),]
 max(apply(tax_df_filt_missing,1,max))

@@ -109,64 +109,64 @@ for (x in 1:nrow(mapping_file)){
 	abx_list_1w_met_oral=c()
 	abx_list_1w_vanco_int=c()
 	abx_list_1w_met_int=c()
-	
-	for (y in 1:nrow(abx_subset)){
-		if ( (sample_date >= abx_subset[y,'order_start_date'] & sample_date <= abx_subset[y,'order_end_date'] )  ){
-		
-			abx_list=c(abx_list,abx_subset[y,'synonym'])        
-			if((sample_date - abx_subset[y,'order_start_date'])>=1){
-				abx_list_24=c(abx_list_24,abx_subset[y,'synonym'])
-				abx_list_1w=c(abx_list_1w,abx_subset[y,'synonym'])
-				if(abx_subset[y,'synonym']=='VANCOMYCIN'){
-				  if(abx_subset[y,'route']=='oral'){
-				    abx_list_1w_vanco_oral=c(abx_list_1w_vanco_oral,abx_subset[y,'synonym'])			  
-				  }
-				  else if(abx_subset[y,'route']=='intravenous'){
-				    abx_list_1w_vanco_int=c(abx_list_1w_vanco_int,abx_subset[y,'synonym'])			  
-				  }
-				}
-				if(abx_subset[y,'synonym']=='METRONIDAZOLE'){
-				  if(abx_subset[y,'route']=='oral'){
-				    abx_list_1w_met_oral=c(abx_list_1w_met_oral,abx_subset[y,'synonym'])			  
-				  }
-				  else if(abx_subset[y,'route']=='intravenous'){
-				    abx_list_1w_met_int=c(abx_list_1w_met_int,abx_subset[y,'synonym'])			  
-				  }
-				}
-			
-			}
-		
-		}
-	  
-		if ((sample_date - abx_subset[y,'order_end_date'])==1){
-			abx_list_24=c(abx_list_24,abx_subset[y,'synonym'])
-		}
-	  
-	  if ((sample_date - abx_subset[y,'order_end_date'])<=7){
-	    abx_list_1w=c(abx_list_1w,abx_subset[y,'synonym'])
-	    
-	    if(abx_subset[y,'synonym']=='VANCOMYCIN'){
-	      if(abx_subset[y,'route']=='oral'){
-	        abx_list_1w_vanco_oral=c(abx_list_1w_vanco_oral,abx_subset[y,'synonym'])			  
-	      }
-	      else if(abx_subset[y,'route']=='intravenous'){
-	        abx_list_1w_vanco_int=c(abx_list_1w_vanco_int,abx_subset[y,'synonym'])			  
-	      }
-	    }
-	    if(abx_subset[y,'synonym']=='METRONIDAZOLE'){
-	      if(abx_subset[y,'route']=='oral'){
-	        abx_list_1w_met_oral=c(abx_list_1w_met_oral,abx_subset[y,'synonym'])			  
-	      }
-	      else if(abx_subset[y,'route']=='intravenous'){
-	        abx_list_1w_met_int=c(abx_list_1w_met_int,abx_subset[y,'synonym'])			  
-	      }
-	    }
-	    
-	    
-	  }
-	  
-	 }
-
+	if (nrow(abx_subset)>0){
+  	for (y in 1:nrow(abx_subset)){
+  		if ( (sample_date >= abx_subset[y,'order_start_date'] & sample_date <= abx_subset[y,'order_end_date'] )  ){
+  		
+  			abx_list=c(abx_list,abx_subset[y,'synonym'])        
+  			if((sample_date - abx_subset[y,'order_start_date'])>=1){
+  				abx_list_24=c(abx_list_24,abx_subset[y,'synonym'])
+  				abx_list_1w=c(abx_list_1w,abx_subset[y,'synonym'])
+  				if(abx_subset[y,'synonym']=='VANCOMYCIN'){
+  				  if(abx_subset[y,'route']=='oral'){
+  				    abx_list_1w_vanco_oral=c(abx_list_1w_vanco_oral,abx_subset[y,'synonym'])			  
+  				  }
+  				  else if(abx_subset[y,'route']=='intravenous'){
+  				    abx_list_1w_vanco_int=c(abx_list_1w_vanco_int,abx_subset[y,'synonym'])			  
+  				  }
+  				}
+  				if(abx_subset[y,'synonym']=='METRONIDAZOLE'){
+  				  if(abx_subset[y,'route']=='oral'){
+  				    abx_list_1w_met_oral=c(abx_list_1w_met_oral,abx_subset[y,'synonym'])			  
+  				  }
+  				  else if(abx_subset[y,'route']=='intravenous'){
+  				    abx_list_1w_met_int=c(abx_list_1w_met_int,abx_subset[y,'synonym'])			  
+  				  }
+  				}
+  			
+  			}
+  		
+  		}
+  	  
+  		if ((sample_date - abx_subset[y,'order_end_date'])==1){
+  			abx_list_24=c(abx_list_24,abx_subset[y,'synonym'])
+  		}
+  	  
+  	  if ((sample_date - abx_subset[y,'order_end_date'])<=7){
+  	    abx_list_1w=c(abx_list_1w,abx_subset[y,'synonym'])
+  	    
+  	    if(abx_subset[y,'synonym']=='VANCOMYCIN'){
+  	      if(abx_subset[y,'route']=='oral'){
+  	        abx_list_1w_vanco_oral=c(abx_list_1w_vanco_oral,abx_subset[y,'synonym'])			  
+  	      }
+  	      else if(abx_subset[y,'route']=='intravenous'){
+  	        abx_list_1w_vanco_int=c(abx_list_1w_vanco_int,abx_subset[y,'synonym'])			  
+  	      }
+  	    }
+  	    if(abx_subset[y,'synonym']=='METRONIDAZOLE'){
+  	      if(abx_subset[y,'route']=='oral'){
+  	        abx_list_1w_met_oral=c(abx_list_1w_met_oral,abx_subset[y,'synonym'])			  
+  	      }
+  	      else if(abx_subset[y,'route']=='intravenous'){
+  	        abx_list_1w_met_int=c(abx_list_1w_met_int,abx_subset[y,'synonym'])			  
+  	      }
+  	    }
+  	    
+  	    
+  	  }
+  	  
+  	 }
+  }
 	if(length(abx_list)>0){
 		mapping_file[x,'ABX_admin_on_sample_collection']<-paste(unique(abx_list), collapse = ';')
 	}

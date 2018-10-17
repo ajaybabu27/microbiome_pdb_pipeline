@@ -180,6 +180,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
   echo -e "#SampleID\tBarcodeSequence\tLinkerPrimerSequence\tDescription\tunclassified_reads\tbacteria_reads\tviral_reads\tcdiff_reads\thuman_reads" > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
 
   sample_directory=#{QC_DIR}/#{RUN_ID}
+
   for sample in $sample_directory/*/ ; do
 
 	sample_id=(`basename $sample`)
