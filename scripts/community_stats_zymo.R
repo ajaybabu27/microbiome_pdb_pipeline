@@ -127,6 +127,7 @@ library(reshape2)
 library(ggplot2)
 library(scales)
 
+
 test <- read.table("../PhiX/PhiXQC_edit_dist.txt",sep='\t',header = T)
 
 test_m_temp<-melt(test,na.rm = T)
@@ -136,10 +137,13 @@ ypos <- c(Inf,Inf)
 mean_char=paste('Mean=',as.character(round(mean(test_m_temp$value),digits=2)))
 sd_char=paste('SD=',as.character(round(sd(test_m_temp$value),digits = 2)))
 annotateText <- c(mean_char,sd_char)
+
 hjustvar<-c(1,1) 
 vjustvar<-c(1,2.5)
 
 pdf("zymo_edit_dist_perhist.pdf", onefile = TRUE,width=15, height=5)
+
+
 p<-ggplot(test_m_temp, aes(x = factor(test_m_temp$value))) +  
   geom_bar(aes(y = (..count..)/sum(..count..))) + 
   scale_y_continuous(labels = percent_format()) + geom_vline(xintercept = quantile(test_m_temp$value,.90)+1,colour='red')+
@@ -148,6 +152,8 @@ p<-ggplot(test_m_temp, aes(x = factor(test_m_temp$value))) +
   scale_x_discrete(limits=as.character(seq(0,10)))
 
 print(p)
+
+
 #Plot percentage histogram plots for edit distances
 library(Rmisc)
 library(ggplot2)

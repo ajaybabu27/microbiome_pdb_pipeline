@@ -8,8 +8,10 @@ library(qiime2R)
 library(tidyverse)
 library(reshape2)
 library('GoodmanKruskal')
+library(plotly)
+library("phyloseq")
 
-setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00007')
+setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00008')
 
 set.seed(100)
 
@@ -41,6 +43,8 @@ mapping_file_shannon_sub<-mapping_file_shannon[mapping_file_shannon$bacteria_rea
 
 ggpairs(mapping_file_shannon_sub[,c('bacteria_reads','input','PCR2','shannon')],lower = list(mapping = aes(color = mapping_file_shannon_sub$hc_bool)))
 
+ggpairs(mapping_file_shannon_sub[,c('bacteria_reads','input','PCR2','shannon')],lower = list(mapping = aes(color = mapping_file_shannon_sub$hc_bool)))
+
 independent=c('bacteria_reads','input','CDItestResult','CaseControlAnnot','ABX_admin_24hrprior_sample_collection_bool',
               'ABX_admin_1wprior_sample_collection_bool', 
               'vanco_oral_admin_1wprior_sample_collection_bool',
@@ -56,13 +60,14 @@ vif_raw=as.data.frame(vif(predictor_df))
 vif_raw$VIF<-round(vif_raw$VIF,2)
 write.table(file='vif_raw.tsv',vif_raw,sep='\t',row.names = F)
 
+
 independent=c('CDItestResult','CaseControlAnnot','ABX_admin_24hrprior_sample_collection_bool',
               'ABX_admin_1wprior_sample_collection_bool', 
               'vanco_oral_admin_1wprior_sample_collection_bool',
               'vanco_int_admin_1wprior_sample_collection_bool',
               'met_oral_admin_1wprior_sample_collection_bool',
               'met_int_admin_1wprior_sample_collection_bool',
-              'Systematic_Plate_ID')
+              'Systematic_Plate_ID','illumina_runid')
 
 predictor_df<-mapping_file_shannon[,independent]
 GKmatrix1 <- GKtauDataframe(predictor_df)
@@ -74,7 +79,7 @@ independent=c('ABX_admin_24hrprior_sample_collection_bool',
               'vanco_int_admin_1wprior_sample_collection_bool',
               'met_oral_admin_1wprior_sample_collection_bool',
               'met_int_admin_1wprior_sample_collection_bool',
-              'Systematic_Plate_ID')
+              'Systematic_Plate_ID','illumina_runid')
 
 predictor_df<-mapping_file_shannon[,independent]
 GKmatrix1 <- GKtauDataframe(predictor_df)
@@ -334,10 +339,26 @@ dev.off()
 ###              OTU based mixed effect lm                           ###
 ########################################################################
 
-tax_df_filt<-as.data.frame(phylo_object_normalized@otu_table)
-tax_df_filt<-merge(tax_df_filt,phylo_object_normalized@tax_table[,c('Rank2')],by=0)
+tax_df_filt<-as.data.frame(phylo_object_phylum@otu_table)
+
+tax_table
+
+tax_df_filt<-merge(tax_df_filt,phylo_object_phylum@tax_table[,c('Rank2')],by=0)
 rownames(tax_df_filt)<-tax_df_filt$Rank2
 tax_df_filt[,c('Row.names','Rank2')]<-NULL
+
+taxa_joined<-as.data.frame(apply(phylo_object@tax_table, 1, paste, collapse="_"))
+colnames(taxa_joined)[1]<-'full_taxa'
+tax_df_filt<-merge(tax_df_filt,taxa_joined,by=0)
+tax_df_filt$Row.names<-NULL
+tax_df_filt<-aggregate(. ~ full_taxa, tax_df_filt, sum)
+rownames(tax_df_filt)<-tax_df_filt$full_taxa
+tax_df_filt$full_taxa<-NULL
+
+rownames(tax_df_filt)<-gsub("\\[", "", rownames(tax_df_filt))
+rownames(tax_df_filt)<-gsub("\\]", "", rownames(tax_df_filt))
+rownames(tax_df_filt)<-gsub("-", "_", rownames(tax_df_filt))
+
 tax_df_filt_t<-t(tax_df_filt)
 
 mapping_file_shannon_otus<-merge(mapping_file_shannon,tax_df_filt_t,by.x=1,by.y=0)
@@ -418,12 +439,23 @@ df_R2_reduced_otu_normalized[,c(3:4)]<-round(100*df_R2_reduced_otu_normalized[,c
   
 colnames(df_R2_reduced_otu_normalized)<-c('Dependent_Var','covariate','R2-reduced%','Cont_per','pval')
 
-png('R2_OTU_dist_norm.png',width=4000,height=2000,res=300)
-ggplot()+geom_jitter(data=df_R2_reduced_otu_normalized,aes(covariate,Cont_per,color=df_R2_reduced_otu_normalized$Dependent_Var), position = position_jitter(width = 0.05))+
+png('R2_OTU_dist_norm_phylum_raw.png',width=4000,height=2000,res=300)
+a<-ggplot()+
+  geom_violin(data=df_R2_reduced_otu_normalized,aes(covariate,Cont_per))+
+geom_jitter(data=df_R2_reduced_otu_normalized,aes(covariate,Cont_per,color=df_R2_reduced_otu_normalized$Dependent_Var), position = position_jitter(width = 0.05))+
   geom_jitter(data=df_R2_reduced_raw,aes(cov_removed,contribution), position = position_jitter(width = 0.05),shape=10,size=5)+
-        theme(axis.text.x = element_text(angle = 90, hjust = 1))+ scale_color_brewer(palette="Paired")#+
-  #coord_cartesian(ylim = c(0, 25)) 
+        theme(axis.text.x = element_text(angle = 65, hjust = 1))+ theme(legend.position="none")#+
+  #coord_cartesian(ylim = c(0, 25))
+print(a)
 dev.off()
+df_R2_reduced_otu_normalized$firmicute_bool<-df_R2_reduced_otu_normalized$Dependent_Var%in%c("Firmicutes")
+a<-ggplot()+geom_jitter(data=df_R2_reduced_otu_normalized,aes(covariate,Cont_per,color=df_R2_reduced_otu_normalized$Dependent_Var,shape=df_R2_reduced_otu_normalized$firmicute_bool), position = position_jitter(width = 0.05))+
+  geom_jitter(data=df_R2_reduced_raw,aes(cov_removed,contribution), position = position_jitter(width = 0.05),shape=10,size=5)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+ theme(legend.position="none")
+#coord_cartesian(ylim = c(0, 25)) 
+
+b<-ggplotly(a)
+htmlwidgets::saveWidget(b, "all_otus_variance_partition_normalized.html")
 
 ########################################################################
 ###The following code Will be moved to seperate script once finalized###
@@ -431,7 +463,7 @@ dev.off()
 
 
 
-setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00007')
+setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00009')
 
 SVs<-read_qza("0_merged_OTU/table.qza")
 otu_table<-as.data.frame(SVs$data)
@@ -452,8 +484,27 @@ mean(sample_count$`sort(colSums(otu_table))`)
 #biom_file=unz(filename = paste(file_ls[1],'/data/feature-table.biom',sep=''),description = "table.qza")
 
 #phyloloseq Analysis
+setwd('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00009')
 
-library("phyloseq")
+#merging mapping files
+mapping_file1<-read.table(file='/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/samples/H434/all_samples_QC/mapping_final.tsv',sep='\t',header = T,comment.char = '')
+mapping_file1<-mapping_file1[mapping_file1$CaseControlAnnot!="healthy control" & mapping_file1$SampleType=="Stool",]
+mapping_file1$illumina_runid='H434'
+
+mapping_file2<-read.table(file='/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/samples/TD00395/all_samples_QC/mapping_final.tsv',sep='\t',header = T,comment.char = '')
+mapping_file2<-mapping_file2[mapping_file2$CaseControlAnnot!="healthy control" & mapping_file2$SampleType=="Stool",]
+
+mapping_file3<-read.table(file='/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/samples/TD00396/all_samples_QC/mapping_final.tsv',sep='\t',header = T,comment.char = '')
+mapping_file3<-mapping_file3[mapping_file3$CaseControlAnnot!="healthy control" & mapping_file3$SampleType=="Stool",]
+
+mapping_file_merged<-rbind(mapping_file1,mapping_file2,mapping_file3)
+mapping_file_merged<-mapping_file_merged[mapping_file_merged$bacteria_reads>500,]
+
+write.table(mapping_file_merged,file='/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00008/0_merged_OTU/mapping_final_combined.tsv',
+            row.names=F,sep='\t',quote = F)
+
+mapping_file_merged<-read.table('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00009/mapping_final_combined.tsv',
+                                sep='\t',header=T)
 
 SVs<-read_qza("0_merged_OTU/table.qza")
 biom_tsv<-as.data.frame(SVs$data)
@@ -465,13 +516,13 @@ colnames(taxonomy_tsv)<-c('Feature.ID','taxonomy')
 
 biom_tsv=merge(biom_tsv,taxonomy_tsv,by.x = 0, by.y = 1)
 
-write.table(biom_tsv,file = '0_merged_OTU/merged_taxon_biome.tsv',sep='\t',row.names = F)
+write.table(biom_tsv,file = '0_merged_OTU/merged_taxon_biome.tsv',sep='\t',row.names = F,quote = F)
 
 #bash command
 #biom convert -i merged_taxon_biome.tsv -o merged_taxon_biome.biom --to-hdf5 --table-type="OTU table" --process-obs-metadata taxonomy
 
 biomot = import_biom('0_merged_OTU/merged_taxon_biome.biom')
-metadata = import_qiime_sample_data('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00007/mapping_final_combined.tsv')
+metadata = import_qiime_sample_data('/home/ajay/Desktop/minerva/sc/orga/projects/InfectiousDisease/microbiome-output/analyses/microany00009/mapping_final_combined.tsv')
 phylo_object = merge_phyloseq(biomot, metadata)
 phylo_object@sam_data$eRAP_ID<-as.factor(as.character(phylo_object@sam_data$eRAP_ID))
 phylo_object@sam_data[is.na(phylo_object@sam_data$cdi_order),'cdi_order']<-0
@@ -502,18 +553,15 @@ p+geom_boxplot(data = p$data, aes(x = combo_cdi_order, y = value,color = combo_c
   stat_summary(fun.data = give.n, geom = "text")
 dev.off()
 
-
-
 rank_names(phylo_object)
 
 phylo_object_phylum<-tax_glom(phylo_object,taxrank = "Rank2")
-tax_df<-as.data.frame(phylo_object@otu_table)
+tax_df<-as.data.frame(phylo_object_phylum@otu_table)
 
-otu_table<-phylo_object_phylum@otu_table
+otu_table<-phylo_object@otu_table
 sparsity=sum(otu_table == 0)/(dim(otu_table)[1]*dim(otu_table)[2])
 
-
-phylo_object_filt<-filter_taxa(phylo_object_phylum, function(x) sum(x > 3) > (0.05*length(x)), TRUE)
+phylo_object_filt<-filter_taxa(phylo_object, function(x) sum(x > 3) > (0.01*length(x)), TRUE)
 tax_df_filt<-as.data.frame(phylo_object_filt@otu_table)
 tax_df_filt_missing<-tax_df[!rownames(tax_df)%in%rownames(tax_df_filt),]
 max(apply(tax_df_filt_missing,1,max))
@@ -524,6 +572,7 @@ phylo_object_normalized = transform_sample_counts(phylo_object_filt, standf)
 
 otu_table<-phylo_object_normalized@otu_table
 sparsity=sum(otu_table == 0)/(dim(otu_table)[1]*dim(otu_table)[2])
+phylo_object_normalized@sam_data$num_otus<-apply(otu_table,2,function(x) sum(x>10000))
 
 
 phylo_object_CV_filtered = filter_taxa(phylo_object_normalized, function(x) sd(x)/mean(x) > 3.0, TRUE)
@@ -536,34 +585,40 @@ p2 = plot_ordination(phylo_object, phylo_object.ord, type="samples", color="eRAP
   stat_ellipse()
 p2
 
+mapping_file_shannon$bacteria_reads<-quantile(mapping_file_shannon$bacteria_reads)
 phylo_object_normalized.ord <- ordinate(phylo_object_normalized, "NMDS", "bray", weighted=TRUE)
-p2 = plot_ordination(phylo_object_normalized, phylo_object_normalized.ord, type="samples", color="eRAP_ID", shape="combo")+
-  stat_ellipse()
-p2
+p2 = plot_ordination(phylo_object_normalized, phylo_object_normalized.ord, type="samples", color="CDItestResult", shape="CaseControlAnnot")+
+  aes(text  = paste("  <i>Patient ID:</i> ",  eRAP_ID, "<br>",
+                                "  <i>bacteria_reads:</i> ", bacteria_reads, "<br>",
+                                "  <i>num_otus_above_1000:</i> ", num_otus, "<br>",
+                                sep=""))
+ggplotly(p2)
+interactive_df<-as.data.frame(phylo_object_normalized.ord$points)
+interactive_df<-merge(interactive_df,mapping_file_shannon[,c(independent)])
 
-independent=c('bacteria_reads','input','PCR2','CDItestResult','CaseControlAnnot','ABX_admin_24hrprior_sample_collection_bool',
+independent=c('bacteria_reads','CDItestResult','CaseControlAnnot','ABX_admin_24hrprior_sample_collection_bool',
               'ABX_admin_1wprior_sample_collection_bool', 
               'vanco_oral_admin_1wprior_sample_collection_bool',
               'vanco_int_admin_1wprior_sample_collection_bool',
               'met_oral_admin_1wprior_sample_collection_bool',
               'met_int_admin_1wprior_sample_collection_bool',
-              'eRAP_ID','Systematic_Plate_ID')
+              'eRAP_ID','Systematic_Plate_ID','illumina_runid')
 
 for(ind in independent){
 print(ind)  
   if(ind=='eRAP_ID'){
-    plot_ordination(phylo_object_normalized , phylo_object_normalized.ord, type="samples", color=ind,title="Normalized")+
+    plot_ordination(phylo_object_normalized , phylo_object_normalized.ord, type="samples", color=ind,title="Raw")+
       stat_ellipse()
-    ggsave(paste(ind,'_Normalized.pdf',sep=''))
+    ggsave(paste(ind,'_Raw_phylum.pdf',sep=''),width=10,height=8)
   }
   else if(is.factor(mapping_file_shannon[,ind]) | is.logical(mapping_file_shannon[,ind])){
   #pdf(paste(y,'.pdf',sep=''),width=10,height=8)
-plot_ordination(phylo_object_normalized , phylo_object_normalized.ord, type="samples", color=ind,title="Normalized")+
-  stat_ellipse()+ scale_color_manual(values=c("blue", "red", "orange",'dark green'))
-    ggsave(paste(ind,'_Normalized.pdf',sep=''))
+plot_ordination(phylo_object , phylo_object.ord, type="samples", color=ind,title="Raw")+
+  stat_ellipse()+ scale_color_manual(values=c("blue", "red", "orange",'dark green','purple','brown','magenta','black'))
+    ggsave(paste(ind,'_Raw_phylum.pdf',sep=''),width=10,height=8)
   }  else{
-    plot_ordination(phylo_object_normalized , phylo_object_normalized.ord, type="samples", color=ind,title="Normalized")
-    ggsave(paste(ind,'_Normalized.pdf',sep=''))
+    plot_ordination(phylo_object , phylo_object.ord, type="samples", color=ind,title="Raw")
+    ggsave(paste(ind,'_Raw_phylum.pdf',sep=''),width=10,height=8)
       
   }
 

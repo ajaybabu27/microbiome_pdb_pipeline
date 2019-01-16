@@ -101,8 +101,8 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
  system <<-SH or abort
     
     module purge
-    module load anaconda3
-    source activate qiime2-2018.8
+    module load anaconda3    
+    source activate qiime2-2018.11
 
     qiime tools import \
     --type 'SampleData[PairedEndSequencesWithQuality]' \
@@ -153,7 +153,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   module purge
   module load anaconda3
-  source activate qiime2-2018.8  
+  source activate qiime2-2018.11  
 
   qiime tools export \
   --input-path #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
@@ -180,6 +180,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
   echo -e "#SampleID\tBarcodeSequence\tLinkerPrimerSequence\tDescription\tunclassified_reads\tbacteria_reads\tviral_reads\tcdiff_reads\thuman_reads" > #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
 
   sample_directory=#{QC_DIR}/#{RUN_ID}
+
   for sample in $sample_directory/*/ ; do
 
 	sample_id=(`basename $sample`)
@@ -197,7 +198,15 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
 	ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" -t 5 -m 3 -s 0 -o $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.kronaQC.html"
 
-	unclassified_reads=(`grep "unclassified" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+
+	if grep -o -P '.{0,1}unclassified' $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | grep -v ' '; then
+
+		unclassified_reads=(`grep "unclassified" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	else
+		unclassified_reads='0'
+
+	fi
+
 	bacteria_reads=(`grep "Bacteria" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
 	viral_reads=(`grep "Viruses" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
 	cdiff_reads=(`grep "Clostridioides difficile" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
@@ -304,13 +313,13 @@ end
 
 
 task :create_postQC_biome_file => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza"]
-file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" do |t|
+file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_sequences.qza" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" do |t|
   
   system <<-SH or abort
     
     module purge
     module load anaconda3
-    source activate qiime2-2018.8
+    source activate qiime2-2018.11
     
     mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out
 
@@ -319,7 +328,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
     --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
     --p-min-frequency #{READS_THRESHOLD} \
     --m-metadata-file #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv \
-    --p-where "SampleType='Stool'" \
+    --p-where "SampleType='Stool' AND NOT CaseControlAnnot='healthy control'" \
     --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib.qza
 
     qiime feature-table filter-features \
@@ -402,13 +411,13 @@ end
 
 desc "Calculate Alpha Diversity, Beta Diversity and perform Taxon classification for singe/multiple Runs"
 task :run_Qiime_analysis => ["#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv"]
-file "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv" => "#{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza" do |t|
+file "#{ANALYSIS_DIR}/4_taxons/taxa-bar-plots.qzv" do |t|
 
 system <<-SH or abort
 
   module purge
   module load anaconda3
-  source activate qiime2-2018.8
+  source activate qiime2-2018.11
 
   #Construct phylogeny for diversity analyses
 

@@ -26,10 +26,10 @@ for column in df:
 	if column=='#OTU ID':
 		continue
 
-	if len([i for i in ['M1','M6','M13','HC','Neg','Zymo'] if column.startswith(i)])>0:
-		sample_folder=column.replace('.','-')
-	else:
-		sample_folder=column.replace('.','_')
+	#if len([i for i in ['M1','M6','M13','HC','Neg','Zymo'] if column.startswith(i)])>0:
+	#	sample_folder=column.replace('.','-')
+	#else:
+	sample_folder=column.replace('.','_')
 	
 	#Create directory containing the final output fasta file if not present already
 	fasta_write_file = working_directory+'/'+sample_folder+'/1_'+column+'.postqc.fasta'
