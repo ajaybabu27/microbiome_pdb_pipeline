@@ -215,9 +215,10 @@ plates_table[grepl("HC",plates_table$Extract_Name),'Extract_Name']<-'HC'
 plates_table[plates_table$Extract_Name %in% c("HC",'M1','Zymo','Neg') & plates_table$Systematic_Plate_ID==plates[1],'Extract_Name']<-paste(plates_table[plates_table$Extract_Name %in% c("HC",'M1','Zymo','Neg') & plates_table$Systematic_Plate_ID==plates[1],'Extract_Name'],'.1',sep='')
 plates_table[plates_table$Extract_Name %in% c("HC",'M1','Zymo','Neg') & plates_table$Systematic_Plate_ID==plates[2],'Extract_Name']<-paste(plates_table[plates_table$Extract_Name %in% c("HC",'M1','Zymo','Neg') & plates_table$Systematic_Plate_ID==plates[2],'Extract_Name'],'.2',sep='')
 mapping_file$SampleID<-mapping_file$`#SampleID`
-mapping_file[grepl("RC",mapping_file$SampleID),'SampleID']<-gsub("\\..*","",mapping_file[grepl("RC",mapping_file$`#SampleID`),'SampleID'])
+#mapping_file[grepl("RC",mapping_file$SampleID),'SampleID']<-gsub("\\..*","",mapping_file[grepl("RC",mapping_file$`#SampleID`),'SampleID'])
 
 plates_table$Extract_Name=gsub(".1A","",plates_table$Extract_Name)
+plates_table$Extract_Name<-paste(plates_table$Extract_Name,opt$run_id,sep='.')
 
 mapping_file=merge(mapping_file,plates_table[,c('Extract_Name','Systematic_Plate_ID')],by.x='SampleID',by.y='Extract_Name',all.x=T)
 mapping_file$SampleID<-NULL

@@ -29,7 +29,7 @@ for fn in os.listdir(working_directory):
 					dict_samples[sample][org]=float(line3[0])
 
 sample_list=sorted(dict_samples.iterkeys())
-organism_list=sorted(dict_samples[sample_list[1]].iterkeys())
+organism_list=sorted(dict_samples[sample_list[0]].iterkeys())
 
 #Iterate through the dictionary to print the values in a unified summary file. 
 with open(working_directory+'/summary.tsv','w') as bwa_out_summ:

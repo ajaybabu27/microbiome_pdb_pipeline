@@ -9,9 +9,11 @@ setwd(args[1])
 
 #Read abundance file
 summary_df=read.table(file='summary.tsv',sep='\t',header=T)
-
-row.names(summary_df)<-summary_df$Sample
+summary_df$Sample<-as.character(summary_df$Sample)
+y <- strsplit(summary_df$Sample,".",fixed=TRUE)
+rownames(summary_df)<-unlist(lapply(y,FUN=function(x){paste(x[1],x[2],sep=".")}))
 summary_df$Sample<-NULL
+
 theoretical_df=read.table(file='/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc_16s_abundance.csv',sep='\t',header=T,row.names = 1)
 summary_df<-summary_df[,c(rownames(theoretical_df),'total')]
 summary_df<-summary_df[grep('M',rownames(summary_df)),] #for run3

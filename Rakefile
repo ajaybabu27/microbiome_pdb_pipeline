@@ -30,6 +30,7 @@ RUN_IDS = ENV['RUN_IDS']
 task :env do
      
   sc_orga_scratch = "/sc/orga/scratch/#{ENV['USER']}"
+  #sc_orga_scratch = "/sc/orga/projects/InfectiousDisease"
   
   ENV['TMP'] ||= Dir.exists?(sc_orga_scratch) ? sc_orga_scratch : "/tmp"
 
@@ -61,14 +62,14 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv" do |t|
     sample_directory=#{FASTQ_DIR}/#{RUN_ID}
     output_directory=#{QC_DIR}/#{RUN_ID}
     
+    rm -r $output_directory/all_samples_QC
     mkdir -p $output_directory/all_samples_QC
 	
     echo -e sample-id,absolute-filepath,direction > $output_directory/all_samples_QC/manifest.csv
     
-    for sample in $sample_directory/*/ ; do	
+    for sample in $sample_directory/*/ ; do	  
 
 	sample_id=(`basename $sample`)
-	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.' | awk '{gsub("_1", "");print}' `)
 
 	if [[ $sample_id = 'all_samples_QC' ]]; then
 
@@ -76,12 +77,15 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/manifest.csv" do |t|
 
 	fi
 
+	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.'`)
+
+	sample_id_mod2=$sample_id_mod.#{RUN_ID}
 	
 	forward_lib=$sample"0_Raw"/$sample_id"_"R1.fastq.gz
-    	reverse_lib=$sample"0_Raw"/$sample_id"_"R2.fastq.gz
+    	reverse_lib=$sample"0_Raw"/$sample_id"_"R2.fastq.gz	
 
-	echo -e $sample_id_mod","$forward_lib",forward" >> $output_directory/all_samples_QC/manifest.csv
-	echo -e $sample_id_mod","$reverse_lib",reverse" >> $output_directory/all_samples_QC/manifest.csv
+	echo -e $sample_id_mod2","$forward_lib",forward" >> $output_directory/all_samples_QC/manifest.csv
+	echo -e $sample_id_mod2","$reverse_lib",reverse" >> $output_directory/all_samples_QC/manifest.csv
 	
     done     
   
@@ -102,7 +106,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
     
     module purge
     module load anaconda3    
-    source activate qiime2-2018.11
+    source activate qiime2-2019.1
 
     qiime tools import \
     --type 'SampleData[PairedEndSequencesWithQuality]' \
@@ -132,7 +136,8 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza" => "#{QC_DIR}/#{RUN_ID
     --p-trunc-len-f 0 \
     --p-trunc-len-r 0 \
     --p-n-threads 0  \
-    --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2
+    --output-dir #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2 \
+    --verbose
 	
     source deactivate    
 
@@ -153,7 +158,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   module purge
   module load anaconda3
-  source activate qiime2-2018.11  
+  source activate qiime2-2019.1  
 
   qiime tools export \
   --input-path #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
@@ -169,7 +174,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   module purge
   module load Krona
-  module load kraken/2.0.7
+  #module load kraken/2.0.7
 
   
   module load python py_packages
@@ -181,38 +186,49 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   sample_directory=#{QC_DIR}/#{RUN_ID}
 
+
+  mkdir -p /tmp/kraken2_db_standard
+
+  cp -n /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard/* /tmp/kraken2_db_standard
+  cp -rn /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard/taxonomy /tmp/kraken2_db_standard
+
   for sample in $sample_directory/*/ ; do
 
 	sample_id=(`basename $sample`)
-	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.' | awk '{gsub("_1", "");print}' `)
 
 	if [[ $sample_id = 'all_samples_QC' ]]; then
 
 		continue
 
 	fi
-	
+
+	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.'`)
+
+
+	sample_id_mod2=$sample_id_mod.#{RUN_ID}
+
+	rm -r $sample"2_kraken"
 	mkdir -p $sample"2_kraken"
 	
-	kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.txt" --report $sample/2_kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" $sample"1_"$sample_id_mod.postqc.fasta
+	/sc/orga/work/kumara22/tools/kraken2/kraken2 --memory-mapping --threads 12 -db /tmp/kraken2_db_standard --output $sample/2_kraken/$sample_id_mod2"_kraken_db_custom_out.txt" --report $sample/2_kraken/$sample_id_mod2"_kraken_db_custom_out.QC.kreport" $sample"1_"$sample_id_mod2.postqc.fasta
 
-	ktImportTaxonomy $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" -t 5 -m 3 -s 0 -o $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.kronaQC.html"
+	ktImportTaxonomy $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.QC.kreport" -t 5 -m 3 -s 0 -o $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.kronaQC.html"
 
 
-	if grep -o -P '.{0,1}unclassified' $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | grep -v ' '; then
+	if grep -o -P '.{0,1}unclassified' $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.QC.kreport" | grep -v ' '; then
 
-		unclassified_reads=(`grep "unclassified" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+		unclassified_reads=(`grep "unclassified" $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
 	else
 		unclassified_reads='0'
 
 	fi
 
-	bacteria_reads=(`grep "Bacteria" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
-	viral_reads=(`grep "Viruses" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
-	cdiff_reads=(`grep "Clostridioides difficile" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
-	human_reads=(`grep "Homo sapiens" $sample"2_"kraken/$sample_id_mod"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	bacteria_reads=(`grep "Bacteria" $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	viral_reads=(`grep "Viruses" $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	cdiff_reads=(`grep "Clostridioides difficile" $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
+	human_reads=(`grep "Homo sapiens" $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.QC.kreport" | cut -d$'\t' -f 2`)
 
-	echo -e $sample_id_mod"\t\t\t\t"$unclassified_reads"\t"$bacteria_reads"\t"$viral_reads"\t"$cdiff_reads"\t"$human_reads >> #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
+	echo -e $sample_id_mod2"\t\t\t\t"$unclassified_reads"\t"$bacteria_reads"\t"$viral_reads"\t"$cdiff_reads"\t"$human_reads >> #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv
 
    done
 
@@ -220,7 +236,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" => "#{QC_DIR}/#{RUN_
 
   mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX
 
-  kraken2 --threads 12 -db /sc/orga/projects/InfectiousDisease/reference-db/kraken/kraken2_db_standard --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --report #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport --paired #{FASTQ_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{FASTQ_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
+  /sc/orga/work/kumara22/tools/kraken2/kraken2 --memory-mapping --threads 12 -db /tmp/kraken2_db_standard --output #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiX_kraken_db_custom_out.txt --report #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport --paired #{FASTQ_DIR}/#{RUN_ID}/Undetermined_S0_L001_R1_001.fastq.gz #{FASTQ_DIR}/#{RUN_ID}/Undetermined_S0_L001_R2_001.fastq.gz
     
   ktImportTaxonomy #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.QC.kreport -t 5 -m 3 -s 0 -o #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.kronaQC.html
 
@@ -241,8 +257,8 @@ end
 # =============
 
 desc "Calculate abundance and edit distances by comparing expected vs oberved MC measures"
-task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf"]
-file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" do |t|
+task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/summary_mc_qc_stats.pdf"]
+file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/summary_mc_qc_stats.pdf" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv" do |t|
 
  system <<-SH or abort
   module purge
@@ -250,6 +266,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
   module load samtools/1.8
   module load R
   module load bamtools
+  
 
   sample_directory=#{QC_DIR}/#{RUN_ID}
   mkdir -p sample_directory/all_samples_QC/mc_QC/zymo
@@ -267,22 +284,34 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
   mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente
 
   for sample in $sample_directory/*/ ; do
-  	
+
 	sample_id=(`basename $sample`)
-	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.' | awk '{gsub("_1", "");print}' `)
-	query_fasta=$sample"1_"$sample_id_mod".postqc.fasta"
+
+	if [[ $sample_id = 'all_samples_QC' ]]; then
+
+		continue
+
+	fi
+
+
+	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.'`)
+
+
+	sample_id_mod2=$sample_id_mod.#{RUN_ID}
+
+	query_fasta=$sample"1_"$sample_id_mod2".postqc.fasta"
 		
 	if [[ $sample_id =~ ^M.* ]]; then	
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/jose_mc.fasta
 		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/clemente
 		mkdir -p $output_directory
-		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
+		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod2 $query_fasta $ref_fasta_file		
 		
 	elif [[ $sample_id =~ ^Z.* ]]; then
 		ref_fasta_file=/sc/orga/projects/InfectiousDisease/reference-db/microbial_community_standards/zymo_mc.fasta
 		output_directory=#{ENV['TMP']}/mc_out/#{RUN_ID}/zymo
 		mkdir -p $output_directory
-		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod $query_fasta $ref_fasta_file		
+		#{REPO_DIR}/scripts/bwa_mapper.sh $output_directory $sample_id_mod2 $query_fasta $ref_fasta_file		
 
 	fi
 	
@@ -300,10 +329,83 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" 
   cp $output_directory/summary.tsv #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/summary.tsv
   Rscript #{REPO_DIR}/scripts/community_stats_zymo.R #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo
 
+
+  module purge
+  module load poppler
+  
+  #Create summary of pdf files
+  pdfunite #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/summary_mc_zymo_stacked.pdf #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/summary_mc_zymo_corr_plot_zymobar.pdf #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/zymo/zymo_edit_dist_perhist.pdf #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/summary_mc_clemente_stacked.pdf #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/summary_mc_M*.pdf #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/clemente/clemente_edit_dist_perhist.pdf #{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_QC/summary_mc_qc_stats.pdf
+
  SH
 
 end
 
+
+# =================
+# = upload_qc_pdb =
+# =================
+
+desc "push QC info to PathogenDB tables"
+task :upload_qc_pdb => [:check] do |t| #, :run_MC_QC
+
+ system <<-SH or abort
+
+  module purge
+  module load R
+
+  Rscript #{REPO_DIR}/scripts/16S_upload_results.R -w #{QC_DIR}/#{RUN_ID} -p #{ENV['PDBPASS']} -r #{RUN_ID}
+
+ SH
+
+end
+
+# ==================
+# = create_qc_page =
+# ==================
+
+desc "Create a landing page for all QC results"
+task :create_qc_page => [:check, :upload_qc_pdb] do |t| 
+
+ system <<-SH or abort
+
+  sample_directory=#{QC_DIR}/#{RUN_ID}
+
+  mkdir -p #{ENV['QC_web_DIR']}/kraken_krona_plots
+  mkdir -p #{ENV['QC_web_DIR']}/#{RUN_ID}
+
+  for sample in $sample_directory/*/ ; do
+
+	sample_id=(`basename $sample`)
+
+	if [[ $sample_id = 'all_samples_QC' ]]; then
+
+		continue
+	fi
+
+	sample_id_mod=(`echo $sample_id | tr '_' '.' | tr '-' '.'`)
+
+	sample_id_mod2=$sample_id_mod.#{RUN_ID}
+
+	ln -sf $sample"2_"kraken/$sample_id_mod2"_kraken_db_custom_out.kronaQC.html" #{ENV['QC_web_DIR']}/kraken_krona_plots/$sample_id_mod2.qc.krona.html
+  done
+
+  #convert $sample_directory/all_samples_QC/run_quality_QC_plot.png -rotate 90 $sample_directory/all_samples_QC/run_quality_QC_plot.png ; 
+  ln -sf $sample_directory/all_samples_QC/run_quality_QC_plot.png #{ENV['QC_web_DIR']}/#{RUN_ID}/run_quality_QC_plot.png
+  ln -sf $sample_directory/all_samples_QC/paired-end-demux-trimmed.qzv #{ENV['QC_web_DIR']}/#{RUN_ID}/paired-end-demux-trimmed.qzv
+  ln -sf $sample_directory/all_samples_QC/mapping_final.tsv #{ENV['QC_web_DIR']}/#{RUN_ID}/mapping_final.tsv
+  ln -sf $sample_directory/all_samples_QC/dada2/feature-table.tsv #{ENV['QC_web_DIR']}/#{RUN_ID}/feature-table.tsv
+  ln -sf $sample_directory/all_samples_QC/dada2/feature-table.biom #{ENV['QC_web_DIR']}/#{RUN_ID}/feature-table.biom
+  ln -sf $sample_directory/all_samples_QC/mc_QC/summary_mc_qc_stats.pdf #{ENV['QC_web_DIR']}/#{RUN_ID}/summary_mc_qc_stats.pdf
+  ln -sf $sample_directory/all_samples_QC/mc_QC/PhiX/PhiXQC_kraken_db_custom_out.kronaQC.html #{ENV['QC_web_DIR']}/#{RUN_ID}/non-barcoded.krona.html
+
+  cp #{ENV['REPO_DIR']}/scripts/index_template.html #{ENV['QC_web_DIR']}/#{RUN_ID}/index.html
+  sed -i -e 's/RUN_ID/#{RUN_ID}/g' #{ENV['QC_web_DIR']}/#{RUN_ID}/index.html
+
+ SH
+
+
+
+end
 
 # ============================
 # = create_postQC_biome_file =
@@ -319,7 +421,12 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
     
     module purge
     module load anaconda3
-    source activate qiime2-2018.11
+    source activate qiime2-2019.1
+
+    if [ -d "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out" ]; then
+      printf '%s\n' "Removing existing final biom directory"
+      rm -rf "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out" 
+    fi
     
     mkdir -p #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out
 
@@ -328,7 +435,7 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
     --i-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/dada2/table.qza \
     --p-min-frequency #{READS_THRESHOLD} \
     --m-metadata-file #{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping_final.tsv \
-    --p-where "SampleType='Stool' AND NOT CaseControlAnnot='healthy control'" \
+    --p-where "SampleType='Stool' AND NOT CaseControlAnnot='healthy control' AND NOT Systematic_Plate_ID='XT064'" \
     --o-filtered-table #{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/table_rem_bad_lib.qza
 
     qiime feature-table filter-features \
@@ -346,38 +453,6 @@ file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/final_biom_out/filtered_representative_
   SH
 
 end
-
-
-# ==================
-# = create_QC_page =
-# ==================
-
-#desc "Create a landing page for all QC results"
-
-#Add Qiime QC and MC QC charts
-
-#Link out to Biom File, Metadata file
-
-# =================
-# = upload_QC_pdb =
-# =================
-
-#desc "push QC info to PathogenDB tables"
-
-#task :run_MC_QC => [:check,"#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf"]
-#file "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mc_qc/zymo/zymo_edit_dist_perhist.pdf" => "#{QC_DIR}/#{RUN_ID}/all_samples_QC/mapping.tsv" do |t| 
-
-# system <<-SH or abort
-
-#  module purge
-#  module load R
-
-#  Rscript #{REPO_DIR}/scripts/16S_upload_results.R -w #{QC_DIR}/#{RUN_ID} -r #{RUN_ID} 
-
-# SH
-
-#end
-
 
 # ==========================
 # = prepare_Qiime_analysis =
@@ -417,12 +492,12 @@ system <<-SH or abort
 
   module purge
   module load anaconda3
-  source activate qiime2-2018.11
+  source activate qiime2-2019.1
 
   #Construct phylogeny for diversity analyses
-
+  
   mkdir -p #{ANALYSIS_DIR}/1_aligned_OTU
-
+  
   qiime alignment mafft \
     --i-sequences #{ANALYSIS_DIR}/0_merged_OTU/representative_sequences.qza \
     --o-alignment #{ANALYSIS_DIR}/1_aligned_OTU/aligned-representative_sequences.qza \
@@ -468,14 +543,14 @@ system <<-SH or abort
     --i-phylogeny #{ANALYSIS_DIR}/1_aligned_OTU/rooted-tree.qza \
     --p-max-depth #{READS_THRESHOLD} \
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
-    --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/alpha-rarefaction_1000.qzv \
-    --p-iterations 1000
+    --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/alpha-rarefaction.qzv
+    #--p-iterations 1000
 
   qiime diversity alpha-group-significance \
     --i-alpha-diversity #{ANALYSIS_DIR}/2_core-metrics-results/shannon_vector.qza \
     --m-metadata-file #{ANALYSIS_DIR}/mapping_final_combined.tsv \
     --o-visualization #{ANALYSIS_DIR}/3_alpha_diversity/shannon-group-significance.qzv
-
+  
   #Perform taxon classification
   mkdir -p #{ANALYSIS_DIR}/4_taxons
   qiime feature-classifier classify-sklearn \
