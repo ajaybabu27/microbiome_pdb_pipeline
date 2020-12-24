@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Must be configured by the end user
+export REPO_DIR="/sc/arion/work/kumara22/microbiome_pdb_pipeline"
+
+# Load required modules
+module load ruby/2.2.0
+
+#Fill in the PDB password here
+export PDBPASS="4um7S4pp"
+
+# Setting up environments for Qiime2
+export FONTCONFIG_PATH=/etc/fonts
+export LC_ALL=aa_DJ.utf8
+export LANG=C.UTF-8
+
+export QC_web_DIR="/hpc/users/kumara22/www/microbiome_QC_page"
+
+# Run rake
+rake -f $REPO_DIR/Rakefile "$@"
