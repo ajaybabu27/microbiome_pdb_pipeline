@@ -482,6 +482,8 @@ if run_ids_array.length == 1
 else
   puts "more than one found - need to add workflow for merging runs !!!"
   #Merege BIOM tables and metatables.
+  #Refer to scripts/qiime_merging.sh to run the merging step !!!!
+  #After running this script invoke the run_Qiime_analysis step.
 
 end
 
